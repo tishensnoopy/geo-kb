@@ -192,18 +192,35 @@ td .d b{color:var(--tx2);font-weight:400}
 .fold>summary::after{content:"展开";font-family:var(--mono);font-size:11px;color:var(--tx3);margin-left:auto}
 .fold[open]>summary::after{content:"收起"}
 .fold-in{padding:0 15px 15px;border-top:1px solid var(--line)}
+.optline{display:flex;align-items:center;gap:12px;padding:12px 0 4px;flex-wrap:wrap}
+.sw{display:inline-flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;
+  color:var(--tx2);font-weight:400}
+.sw input{width:15px;height:15px;accent-color:var(--ac);cursor:pointer}
 
 .fld{margin-bottom:17px}
-.fld:last-child{margin-bottom:0}
-.fld>label{display:block;font-size:13.5px;font-weight:500;margin-bottom:5px}
 .fld .hint{font-size:12px;color:var(--tx3);line-height:1.7;margin-bottom:7px}
+.fld .hint.short{margin-bottom:5px}
+/* 长提示收进「为什么要填这个」，避免提示文字比输入框还高 */
+.why{font-family:var(--mono);font-size:10.5px;color:var(--tx3);background:none;border:none;
+  padding:0;cursor:pointer;margin-left:auto;text-decoration:underline dotted;
+  text-underline-offset:3px;flex:none}
+.why:hover{color:var(--ac)}
+.fld>label{display:flex;align-items:baseline;gap:6px;margin-bottom:5px;font-size:13.5px;font-weight:500}
+.whybox{font-size:12px;color:var(--tx2);line-height:1.75;background:var(--bg3);
+  border-left:2px solid var(--line2);border-radius:0 3px 3px 0;padding:9px 11px;margin-bottom:8px}
+.fld:last-child{margin-bottom:0}
 .fld input,.fld textarea,.fld select{width:100%;padding:10px 12px;background:var(--bg2);
   border:1px solid var(--line2);border-radius:4px;line-height:1.6;transition:border-color .18s}
 .fld input:focus,.fld textarea:focus,.fld select:focus{border-color:var(--ac);outline:none}
 .fld textarea{resize:vertical;min-height:76px}
 .fld input::placeholder,.fld textarea::placeholder{color:var(--tx3)}
 .req{font-family:var(--mono);font-size:10.5px;color:var(--am);margin-left:6px;font-weight:400}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 15px}
+.fld{margin-bottom:17px}
+/* 两列布局时，每个字段用 flex 列布局，输入框 margin-top:auto 压到底部。
+   这样提示文字行数不同（左1行右2行）也不会让输入框错位。 */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 18px;align-items:stretch}
+.grid2 .fld{display:flex;flex-direction:column}
+.grid2 .fld>input,.grid2 .fld>textarea{margin-top:auto}
 
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:38px;
   padding:0 16px;border:1px solid var(--line2);border-radius:4px;background:var(--bg2);
@@ -294,6 +311,15 @@ td .d b{color:var(--tx2);font-weight:400}
 .toast.on{opacity:1;transform:translate(-50%,0)}
 .toast.ok{background:var(--ac);color:var(--ac-txt)}
 
+/* 表单两列的启用条件：主区净宽 ≥ 640px。
+   算过：486px 的内嵌面板下每列只有 204px，36 字提示要折 2 行，必然错位。
+   1120px 窗口下主区净宽 = 1120-40-206-32-32 ≈ 810px，两列各约 396px，够用。
+   所以 1119px 以下一律单列——这一档与侧栏断点分开算，
+   因为侧栏收起不代表主区够宽。 */
+@media(max-width:1119px){
+  .grid2{grid-template-columns:1fr;gap:0}
+}
+
 @media(min-width:1080px){
   .shell{display:grid;grid-template-columns:206px 1fr;gap:32px;align-items:start}
   .rail{display:block;position:sticky;top:76px}
@@ -319,7 +345,7 @@ td .d b{color:var(--tx2);font-weight:400}
   .shell{padding:16px 14px 48px}
   .today{padding:16px}
   .tasks{grid-template-columns:1fr}
-  .cmp,.grid2,.fact-meta{grid-template-columns:1fr}
+  .cmp,.fact-meta{grid-template-columns:1fr}
   td.k{width:auto}
   .tgts{grid-template-columns:1fr}
   .sec-h h2{font-size:16.5px}
@@ -535,7 +561,7 @@ var DRAFT="geokb_draft_v2", THEME="geokb_theme";
 var ENVT={t:null}, TGTSEL="", FIRM=null, FROMFILE=false;
 var S={ent:"",full:"",brand:"",web:"",biz:"",area:"",goal:"",try:""};
 var INT=[],EXT=[],CF=[],BLIND=[],FLD=[],TODO=[],LOG=[],SEED_DONE=false;
-var TASKS=[], PROG=[];
+var TASKS=[], PROG=[], ONLY_REQ=0;
 
 /* 主题：首屏渲染前应用，避免闪 */
 (function(){
@@ -675,10 +701,22 @@ function renderProf(){
   b.className="pbar"+(s.prof<4?" warn":"");
   document.getElementById("profNum").textContent=s.prof+" / 7";
 
-  var rows=PROF.map(function(p){
+  var list=ONLY_REQ?PROF.filter(function(p){return p[2];}):PROF;
+  var rows=list.map(function(p){
     var v=S[p[0]];
-    return '<div class="fld"><label>'+esc(p[1])+(p[2]?'<span class="req">必填</span>':"")+'</label>'+
-      (p[4]?'<div class="hint">'+esc(p[4])+'</div>':"")+
+    // 提示文字长的收进「为什么要填这个」——避免提示比输入框还高
+    var hint=p[4]||"";
+    var help=hint.length>22?
+      '<button class="why" type="button" data-why="'+esc(hint)+'">为什么要填这个</button>':"";
+    var hintHtml="";
+    if(hint){
+      hintHtml=help
+        ?'<div class="hint short">'+esc(hint.slice(0,22))+'…</div>'+
+         '<div class="whybox" style="display:none">'+esc(hint)+'</div>'
+        :'<div class="hint">'+esc(hint)+'</div>';
+    }
+    return '<div class="fld"><label>'+esc(p[1])+(p[2]?'<span class="req">必填</span>':"")+
+      (help?help:"")+'</label>'+hintHtml+
       '<input data-pf="'+p[0]+'" value="'+esc(v||"")+'" placeholder="'+esc(p[3])+'" aria-label="'+esc(p[1])+'"></div>';
   }).join("");
   var miss=PROF.filter(function(p){return p[2]&&!S[p[0]];});
@@ -699,9 +737,16 @@ function renderProf(){
   }
   el.innerHTML=note+
     '<details class="fold"'+(s.has?" open":"")+'><summary>展开填写表单</summary>'+
-    '<div class="fold-in"><div class="grid2">'+rows+'</div>'+
-    '<div class="btn-row"><button class="btn btn-p" id="save0">保存并继续</button>'+
-    '<span class="hint">保存后跟 Agent 说「搜一下 '+(S.brand||"这家企业")+'」</span></div>'+
+    '<div class="fold-in">'+
+    '<div class="optline"><label class="sw"><input type="checkbox" id="onlyReq"'+
+      (ONLY_REQ?" checked":"")+'><span>只显示必填项</span></label>'+
+      '<span class="hint" id="reqCount"></span></div>'+
+    '<div class="grid2">'+rows+'</div>'+
+    '<div class="hint" id="reqCount" style="margin-top:4px">必填 '+
+      PROF.filter(function(p){return p[2];}).length+' 项，非必填 '+
+      PROF.filter(function(p){return !p[2];}).length+' 项</div>'+
+    '<div class="btn-row"><button class="btn btn-p" id="save0">保存，然后投递检索任务</button>'+
+    '<span class="hint">保存后回到「交给 Agent 做」点投递，Agent 会自动开始检索</span></div>'+
     '</div></details>';
 }
 
@@ -1470,6 +1515,11 @@ document.addEventListener("click",function(e){
     document.getElementById("mclose").onclick=closeM;return;}
   if(e.target.closest("#mclose")){closeM();return;}
 
+  if((t=e.target.closest("[data-why]"))){
+    var bx=t.parentNode.querySelector(".whybox");
+    if(bx){bx.style.display=(bx.style.display==="block")?"none":"block";
+      t.textContent=(bx.style.display==="block")?"收起说明":"为什么要填这个";}
+    return;}
   if(e.target.closest("#btnDeliver")){deliver();return;}
   if((t=e.target.closest("[data-ask]"))){askCmd(t.getAttribute("data-ask"));return;}
   if((t=e.target.closest("[data-goto]"))){
@@ -1559,7 +1609,7 @@ document.addEventListener("click",function(e){
   if(e.target.closest("#btnDemoClear")){
     SEED_DONE=false;S={ent:"",full:"",brand:"",web:"",biz:"",area:"",goal:"",try:""};
     INT=[];EXT=[];CF=[];BLIND=[];FLD=[];TODO=[];LOG=[];FIRM=null;FROMFILE=false;
-    TASKS=[];PROG=[];
+    TASKS=[];PROG=[];ONLY_REQ=0;
     var en2=document.getElementById("entName");if(en2)en2.value="";
     save();refreshAll();toast("已清空");return;}
   if(e.target.closest("#save0")){
@@ -1584,6 +1634,10 @@ document.addEventListener("click",function(e){
       addLog("补一条事实",n2.slice(0,18),"");
       closeM();save();refreshAll();toast("已添加，记得补齐四格",true);};
     return;}
+});
+document.addEventListener("change",function(e){
+  if(e.target.id==="onlyReq"){ONLY_REQ=e.target.checked?1:0;refreshAll();return;}
+  if(e.target.id==="entName")return;
 });
 document.getElementById("mask").addEventListener("click",function(e){
   if(e.target===this)closeM();});
