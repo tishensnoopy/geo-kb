@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>GEO 知识库工作台</title>
+<meta name="description" content="按客户购买意图推导出 AI 必须准确复述的事实，逐条收集、挂证据、标责任人。">
+<meta property="og:type" content="website">
+<meta property="og:title" content="GEO 知识库工作台">
+<meta property="og:description" content="页面只做确认与核对，联网检索与字段推导由 Agent 执行。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230a0b0a'/%3E%3Ctext x='16' y='22' font-family='monospace' font-size='14' fill='%23b4ff3d' text-anchor='middle'%3Ek%3C/text%3E%3C/svg%3E">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+/* ========== 主题：暗黑为默认，明亮为备选（色板已按 WCAG AA 校验） ========== */
+:root,html[data-t="dark"]{
+  --bg:#0a0b0a; --bg2:#101210; --bg3:#161916;
+  --line:#242824; --line2:#333933;
+  --tx:#e8eae6; --tx2:#8f958c; --tx3:#5c615a;
+  --ac:#b4ff3d; --ac-dim:#7cb82a; --ac-bg:rgba(180,255,61,.07); --ac-txt:#0a0b0a;
+  --am:#ffc53d; --am-bg:rgba(255,197,61,.08);
+  --rd:#ff5c3d; --rd-bg:rgba(255,92,61,.07);
+  --sh:rgba(0,0,0,.5);
+}
+html[data-t="light"]{
+  --bg:#fbfbf9; --bg2:#ffffff; --bg3:#f3f3ef;
+  --line:#e2e2dc; --line2:#cfcfc6;
+  --tx:#1a1c18; --tx2:#5a5e55; --tx3:#666a61;
+  --ac:#3f6b18; --ac-dim:#558b1f; --ac-bg:#eaf3dd; --ac-txt:#ffffff;
+  --am:#8a5a00; --am-bg:#fdf1dc;
+  --rd:#b03018; --rd-bg:#fceae4;
+  --sh:rgba(26,28,24,.16);
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--tx);font-family:var(--sans);font-size:16px;line-height:1.65;
+  -webkit-font-smoothing:antialiased;padding-bottom:calc(28px + env(safe-area-inset-bottom))}
+button{font-family:inherit}
+
+/* 布局 */
+.shell{display:flex;min-min-height:100dvh}
+.side{width:232px;flex:none;border-right:1px solid var(--line);padding:20px 0;
+  position:sticky;top:0;min-height:100dvh;overflow-y:auto;background:var(--bg)}
+.side .lgo{font-family:var(--mono);font-size:13.5px;padding:0 20px 20px;margin-bottom:14px;
+  border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
+.side .lgo b{color:var(--ac);font-weight:600}
+.side .sec-l{font-family:var(--mono);font-size:10.5px;color:var(--tx3);letter-spacing:.12em;
+  padding:16px 20px 8px}
+.side a{display:flex;align-items:center;gap:9px;padding:9px 20px;font-size:14px;color:var(--tx2);
+  text-decoration:none;border-left:2px solid transparent;min-height:40px}
+.side a:hover{color:var(--tx);background:var(--bg2)}
+.side a.on{color:var(--ac);border-left-color:var(--ac);background:var(--ac-bg)}
+.side a .nn{font-family:var(--mono);font-size:10.5px;color:var(--tx3);margin-left:auto}
+.side a.on .nn{color:var(--ac)}
+.main{flex:1;min-width:0;padding:26px 30px 40px}
+@media(max-width:1000px){
+  .shell{flex-direction:column}
+  .side{width:100%;height:auto;position:static;border-right:none;border-bottom:1px solid var(--line);
+    padding:14px 0;overflow-x:auto}
+  .side .lgo{padding:0 16px 12px;margin-bottom:10px}
+  .side .sec-l{display:none}
+  .side a{border-left:none;border-bottom:2px solid transparent;padding:8px 16px;white-space:nowrap}
+  .side a.on{border-left:none;border-bottom-color:var(--ac)}
+  .main{padding:20px 16px 32px}
+}
+
+/* 顶条 */
+.bar{display:flex;align-items:flex-start;gap:16px;margin-bottom:26px;flex-wrap:wrap}
+.bar .t{flex:1;min-width:200px}
+.bar h1{font-size:22px;font-weight:600;letter-spacing:-.02em;line-height:1.35}
+.bar .d{font-family:var(--mono);font-size:12px;color:var(--tx3);margin-top:5px}
+.ent{display:flex;gap:8px;align-items:center;background:var(--bg2);border:1px solid var(--line2);
+  border-radius:3px;padding:7px 8px 7px 13px;font-family:var(--mono);font-size:12px}
+.ent .dt{width:6px;height:6px;background:var(--am);border-radius:50%}
+.ent input{background:transparent;border:none;color:var(--tx);font-family:var(--mono);font-size:12px;
+  width:180px;outline:none;padding:3px 0}
+.ent input::placeholder{color:var(--tx3)}
+
+/* 提示条 */
+.alert{border:1px solid var(--am);background:var(--am-bg);border-radius:3px;padding:14px 16px;margin-bottom:22px;
+  font-size:14px;line-height:1.7}
+.alert .ah{font-family:var(--mono);font-size:12px;color:var(--am);margin-bottom:6px;letter-spacing:.06em}
+.alert p{color:var(--tx2)}
+
+/* 卡片 */
+.card{border:1px solid var(--line);border-radius:3px;background:var(--bg2);margin-bottom:16px;overflow:hidden}
+.card-h{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;
+  gap:12px;background:var(--bg3);flex-wrap:wrap}
+.card-h .n{font-family:var(--mono);font-size:11.5px;color:var(--ac)}
+.card-h .t{font-size:15.5px;font-weight:500;flex:1;min-width:140px}
+.card-b{padding:18px 20px}
+
+/* 意图条 */
+.ii{border-bottom:1px solid var(--line);padding:16px 0;display:grid;grid-template-columns:1fr auto;gap:14px}
+.ii:last-child{border-bottom:none}
+.ii .tt{font-size:15px;font-weight:500;margin-bottom:6px;line-height:1.45}
+.ii .qq{font-family:var(--mono);font-size:12.5px;color:var(--tx2);line-height:1.75}
+.ii .qq b{color:var(--ac);font-weight:400}
+.ii .st{font-family:var(--mono);font-size:11px;padding:3px 9px;border-radius:2px;white-space:nowrap;align-self:start}
+.st.ok{background:var(--ac-bg);color:var(--ac)}
+.st.wait{background:rgba(255,197,61,.1);color:var(--am)}
+.st.todo{background:var(--bg3);color:var(--tx3)}
+
+/* 推导格 */
+.drv{border:1px solid var(--line);border-radius:3px;background:var(--bg2);overflow:hidden;margin-bottom:16px}
+.drv-h{padding:12px 18px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11.5px;
+  color:var(--tx3);background:var(--bg3)}
+.drv-b{padding:4px 18px 14px}
+.dl{display:grid;grid-template-columns:108px 1fr;gap:16px;padding:12px 0;border-bottom:1px dashed var(--line)}
+.dl:last-child{border-bottom:none}
+.dl .k{font-family:var(--mono);font-size:11.5px;color:var(--tx3);padding-top:3px}
+.dl .v{font-size:14px;line-height:1.7}
+.dl.r .k{color:var(--rd)} .dl.r .v{color:var(--rd)}
+.dl.f .k{color:var(--ac)} .dl.f .v{color:var(--ac)}
+
+/* 字段 */
+.fld{margin-bottom:14px}
+.fld:last-child{margin-bottom:0}
+.fld>label{display:block;font-size:14px;color:var(--tx);margin-bottom:5px;font-weight:500}
+.fld .hint{font-family:var(--mono);font-size:11.5px;color:var(--tx3);margin-bottom:7px;line-height:1.65}
+.fld .hint.why{color:var(--am)}
+.fld input,.fld textarea,.fld select{width:100%;background:var(--bg);border:1px solid var(--line2);
+  border-radius:2px;color:var(--tx);font-family:var(--sans);font-size:16px;padding:11px 12px;line-height:1.6}
+.fld textarea{min-height:78px;resize:vertical;font-size:15px}
+.fld input:focus,.fld textarea:focus,.fld select:focus{outline:none;border-color:var(--ac-dim)}
+.fld .meta{display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;align-items:center}
+.fld .meta input,.fld .meta select{flex:1;min-width:110px;font-size:14px;padding:8px 10px}
+.fld .meta label{font-family:var(--mono);font-size:10.5px;color:var(--tx3);width:100%;margin-bottom:-2px}
+.fld .ok{font-family:var(--mono);font-size:11px;color:var(--ac);margin-top:6px;display:flex;gap:6px;align-items:center}
+.fld .miss{font-family:var(--mono);font-size:11px;color:var(--rd);margin-top:6px}
+.fld.dup{margin-bottom:12px}
+.dupbox{font-family:var(--mono);font-size:11.5px;color:var(--tx3);background:var(--bg);
+  padding:11px 13px;border-radius:2px;border-left:2px solid var(--line2);line-height:1.7}
+.mtag{display:inline-block;font-family:var(--mono);font-size:10.5px;color:var(--am);
+  background:var(--am-bg);padding:2px 8px;border-radius:2px;margin-left:8px;vertical-align:middle}
+.req{color:var(--am);font-size:11px;margin-left:5px}
+
+/* 按钮 */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:44px;padding:0 18px;
+  border-radius:2px;font-size:14px;cursor:pointer;border:1px solid var(--line2);background:var(--bg2);
+  color:var(--tx);transition:border-color .22s,color .22s,background .22s,transform .12s}
+.btn:hover{border-color:var(--tx3)}
+.btn:active{transform:translateY(1px)}
+.btn-p{background:var(--ac);border-color:var(--ac);color:var(--ac-txt);font-weight:600}
+.btn-p:hover{background:#c8ff5e}
+.btn-sm{min-height:36px;padding:0 13px;font-size:13px}
+.btn-rd{border-color:var(--rd);color:var(--rd)}
+.btn-row{display:flex;gap:9px;margin-top:16px;flex-wrap:wrap}
+
+/* 焦点可见（无障碍必须） */
+a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,
+select:focus-visible,.opt:focus-visible{
+  outline:2px solid var(--ac);outline-offset:2px;border-radius:2px}
+.opt:active{transform:translateY(1px)}
+.mini:active,.btn-sm:active{transform:translateY(1px)}
+
+/* 内联提示，替代 alert() */
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(80px);
+  background:var(--rd);color:#fff;font-size:14px;padding:12px 20px;border-radius:3px;
+  z-index:120;opacity:0;transition:transform .26s cubic-bezier(.2,.8,.3,1),opacity .26s;max-width:88vw;text-align:center}
+.toast.on{transform:translateX(-50%) translateY(0);opacity:1}
+.toast.ok{background:var(--ac);color:var(--ac-txt)}
+
+/* 主题切换 */
+.bridge{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.bridge .hint{font-family:var(--mono);font-size:11px;color:var(--tx3);white-space:nowrap}
+.bridge .hint.warn{color:var(--am)}
+.ttt{margin-left:auto;min-width:34px;height:26px;display:inline-flex;align-items:center;
+  justify-content:center;background:var(--bg3);border:1px solid var(--line2);border-radius:2px;
+  cursor:pointer;color:var(--tx2);transition:border-color .2s,color .2s}
+.ttt:hover{border-color:var(--ac-dim);color:var(--ac)}
+.ttt:active{transform:translateY(1px)}
+.ttt svg{width:14px;height:14px}
+@media(max-width:1000px){
+  .side .lgo{padding:0 16px 12px;margin-bottom:10px}
+  .ttt{min-width:44px;height:34px}
+  .ttt svg{width:16px;height:16px}
+}
+
+/* 跳转链接 */
+.skip{position:absolute;left:-9999px;top:0;background:var(--ac);color:var(--ac-txt);
+  padding:10px 16px;font-family:var(--mono);font-size:13px;z-index:100}
+.skip:focus{left:0}
+
+/* 外部说法 */
+.ext{border:1px solid var(--line);border-left:3px solid var(--line2);border-radius:3px;
+  background:var(--bg2);padding:15px 17px;margin-bottom:12px}
+.ext.cf{border-left-color:var(--rd);background:var(--rd-bg)}
+.ext.gap{border-left-color:var(--am);background:var(--am-bg)}
+.ext .eh{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.ext .sn{font-size:14.5px;font-weight:500}
+.ext .lv{font-family:var(--mono);font-size:10.5px;padding:2px 8px;border-radius:2px}
+.lv.A{background:var(--ac-bg);color:var(--ac)}
+.lv.B{background:rgba(77,163,255,.1);color:#4da3ff}
+.lv.C{background:var(--am-bg);color:var(--am)}
+.ext .qt{font-family:var(--mono);font-size:12.5px;color:var(--tx2);line-height:1.8;
+  background:var(--bg);padding:12px 14px;border-radius:2px;white-space:pre-wrap;word-break:break-word}
+.ext .mm{display:flex;gap:14px;margin-top:10px;flex-wrap:wrap;font-family:var(--mono);font-size:11px;color:var(--tx3)}
+.ext .mm a{color:var(--tx3)}
+.ext .mm a:hover{color:var(--ac)}
+
+/* 更新待办 */
+.todo-row{display:flex;gap:12px;align-items:center;padding:13px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.todo-row:last-child{border-bottom:none}
+.todo-row .tt{flex:1;min-width:180px;font-size:14.5px;line-height:1.5}
+.todo-row .dd{font-family:var(--mono);font-size:11.5px;color:var(--tx3)}
+.todo-row.over .dd{color:var(--rd)}
+.todo-row .due{font-family:var(--mono);font-size:11px;padding:3px 9px;border-radius:2px;background:var(--am-bg);color:var(--am)}
+.todo-row.over .due{background:var(--rd-bg);color:var(--rd)}
+
+/* 变更 */
+.log{display:flex;gap:14px;padding:13px 0;border-bottom:1px solid var(--line);align-items:flex-start}
+.log:last-child{border-bottom:none}
+.log .ld{font-family:var(--mono);font-size:11px;color:var(--tx3);flex:none;width:82px;padding-top:3px}
+.log .lb{flex:1;min-width:0}
+.log .lt{font-size:14.5px;line-height:1.5}
+.log .lx{font-family:var(--mono);font-size:12px;color:var(--tx2);margin-top:5px;line-height:1.7}
+.log .lx s{color:var(--tx3)}
+.log .lx b{color:var(--ac);font-weight:400}
+
+/* 冲突与盲区 */
+.cf{border:1px solid var(--rd);border-left:3px solid var(--rd);background:var(--rd-bg);
+  border-radius:3px;padding:15px 17px;margin-bottom:12px}
+.cf.done{border-color:var(--line2);border-left-color:var(--line2);background:var(--bg2);opacity:.72}
+.cf .ch2{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.cf .ci{font-size:14.5px;font-weight:500}
+.cf .cmp{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;margin:10px 0}
+.cf .side{font-family:var(--mono);font-size:12.5px;line-height:1.75;background:var(--bg);
+  padding:11px 13px;border-radius:2px;word-break:break-word}
+.cf .vs{color:var(--rd);font-size:13px}
+.cf .q2{font-size:13.5px;color:var(--tx);line-height:1.7;background:var(--bg);
+  padding:11px 13px;border-radius:2px;margin-bottom:10px}
+.cf .q2 b{color:var(--am)}
+@media(max-width:640px){.cf .cmp{grid-template-columns:1fr}.cf .vs{text-align:center}}
+
+.blind{border:1px solid var(--am);border-left:3px solid var(--am);background:var(--am-bg);
+  border-radius:3px;padding:15px 17px;margin-bottom:12px}
+.blind.done{border-color:var(--line2);border-left-color:var(--ac-dim);background:var(--bg2);opacity:.8}
+.blind .bh{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:9px}
+.blind .bi{font-size:14.5px;font-weight:500}
+.blind .bd2{font-size:13.5px;color:var(--tx2);line-height:1.7;margin-bottom:11px}
+.blind .why{font-family:var(--mono);font-size:11.5px;color:var(--tx3);margin-bottom:11px}
+.opts{display:flex;gap:7px;flex-wrap:wrap}
+.opt{min-height:38px;padding:0 13px;border:1px solid var(--line2);background:var(--bg);
+  border-radius:2px;font-size:13.5px;cursor:pointer;color:var(--tx2);font-family:inherit}
+.opt:hover{border-color:var(--ac-dim);color:var(--tx)}
+.opt.on{background:var(--ac);border-color:var(--ac);color:var(--ac-txt);font-weight:500}
+
+/* 空状态 */
+.empty{padding:34px 20px;text-align:center;font-family:var(--mono);font-size:13px;color:var(--tx3);line-height:1.9}
+.empty .big{font-size:15px;color:var(--tx2);margin-bottom:8px;font-family:var(--sans)}
+
+/* 弹窗 */
+.mask{position:fixed;inset:0;background:rgba(5,6,5,.8);display:flex;align-items:flex-end;justify-content:center;z-index:90}
+@media(min-width:721px){.mask{align-items:center;padding:24px}}
+.modal{background:var(--bg2);width:100%;max-width:520px;max-height:88vh;overflow-y:auto;
+  border:1px solid var(--line2);border-radius:3px;padding:22px;box-sizing:border-box}
+@media(min-width:721px){.modal{border-radius:3px;max-height:84vh}}
+.modal h3{font-size:17px;font-weight:600;margin-bottom:5px}
+.modal .msub{font-family:var(--mono);font-size:11.5px;color:var(--tx3);margin-bottom:18px}
+.modal .btn-row{display:flex;gap:9px}
+.modal .btn-row .btn{flex:1}
+
+/* 底部条 */
+.foot{border-top:1px solid var(--line);margin-top:32px;padding-top:18px;
+  font-family:var(--mono);font-size:11.5px;color:var(--tx3);display:flex;gap:16px;flex-wrap:wrap}
+/* 页面区块 */
+.pg{display:none}
+.pg.on{display:block;animation:fade .2s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+/* 代码/文本输出块 */
+.say{font-family:var(--mono);font-size:12px;line-height:1.75;background:var(--bg3);
+  border:1px solid var(--line);border-radius:3px;padding:14px;margin-top:14px;
+  white-space:pre-wrap;word-break:break-word;max-height:420px;overflow-y:auto;color:var(--tx2)}
+/* 同步目标卡片 */
+.tgts{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:10px;margin-bottom:18px}
+.tgt{border:1px solid var(--line2);border-radius:3px;padding:12px 13px;cursor:pointer;
+  background:var(--bg2);transition:border-color .2s,background .2s;text-align:left;
+  font-family:inherit;color:inherit;display:block;width:100%}
+.tgt:hover{border-color:var(--tx3)}
+.tgt:active{transform:translateY(1px)}
+.tgt.on{border-color:var(--ac);background:var(--ac-bg)}
+.tgt.off{opacity:.72;cursor:allowed}
+.tgt.off:hover{border-color:var(--line2)}
+.tgt-t{font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:7px;margin-bottom:5px}
+.tgt-s{font-family:var(--mono);font-size:10.5px;color:var(--tx3);line-height:1.65}
+.tgt-s b{color:var(--tx2);font-weight:500}
+.tgt-need{margin-top:6px;font-family:var(--mono);font-size:10.5px;color:var(--am);line-height:1.6}
+.tgt-flag{font-family:var(--mono);font-size:10px;padding:1px 5px;border-radius:2px;
+  border:1px solid currentColor;flex:none}
+.flag-ok{color:var(--ac)}
+.flag-no{color:var(--rd)}
+.flag-un{color:var(--tx3)}
+
+</style>
+</head>
+<body>
+<a class="skip" href="#main">跳到主要内容</a>
+<div class="shell">
+<nav class="side">
+  <div class="lgo"><b>geo-kb</b> 工作台
+    <button class="ttt" id="ttBtn" title="切换明暗主题" aria-label="切换明暗主题"></button>
+  </div>
+  <div class="sec-l">建库流程</div>
+  <a href="#s0" data-p="s0"><span>1</span> 企业档案</a>
+  <a href="#s2" data-p="s2"><span>2</span> 外部对账</a>
+  <a href="#s3" data-p="s3"><span>3</span> 购买意图</a>
+  <a href="#s4" data-p="s4"><span>4</span> 必填事实</a>
+  <a href="#s6" data-p="s6"><span>5</span> 更新待办</a>
+  <a href="#s8" data-p="s8"><span>6</span> 变更记录</a>
+  <div class="sec-l">出口</div>
+  <a href="#s7" data-p="s7"><span>7</span> 同步知识库</a>
+</nav>
+
+<main class="main" id="main">
+
+<div class="bar">
+  <div class="t">
+    <h1 id="ptitle">企业档案</h1>
+    <div class="d" id="pd">第 1 步 · 拿基本信息</div>
+  </div>
+  <div class="ent"><span class="dt"></span><input id="entName" placeholder="企业简称"></div>
+  <div class="bridge">
+    <button class="btn btn-sm" id="btnImport">导入数据文件</button>
+    <button class="btn btn-sm" id="btnExport">导出变更包</button>
+    <span class="hint" id="syncHint"></span>
+  </div>
+  <input type="file" id="fileInput" accept=".json,application/json" multiple style="display:none">
+</div>
+
+<div class="alert" id="todayBar">
+  <div class="ah">!/ 今日待处理</div>
+  <p id="todayTxt"></p>
+</div>
+
+<!-- 0 企业档案 -->
+<section class="pg" id="s0">
+  <div class="card">
+    <div class="card-h"><span class="n">1</span><span class="t">基本信息</span><span class="st todo" id="st0">未开始</span></div>
+    <div class="card-b">
+      <div class="fld">
+        <label>工商全称<span class="req">必填</span></label>
+        <div class="hint">营业执照上的名字。答不上也没关系，先用品牌名 + 地区检索，主体会标「未确认」</div>
+        <input id="f0full" placeholder="示例市××健身服务有限公司">
+      </div>
+      <div class="fld">
+        <label>常用品牌名<span class="req">必填</span></label>
+        <input id="f0brand" placeholder="客户平时怎么称呼我们">
+      </div>
+      <div class="fld">
+        <label>官网地址</label>
+        <div class="hint">没有官网不是问题，但要意识到——官网是最权威的事实来源，缺了它 AI 只能引用第三方平台的说法，而那些错误它也会学</div>
+        <input id="f0web" placeholder="https://">
+      </div>
+      <div class="fld">
+        <label>主营业务<span class="req">必填</span></label>
+        <div class="hint">用你自己的说法，不要改成行业术语。AI 会照着复述</div>
+        <textarea id="f0biz" placeholder="我们主要做什么"></textarea>
+      </div>
+      <div class="fld">
+        <label>主要客户地区<span class="req">必填</span></label>
+        <input id="f0area" placeholder="集中在哪个城市、哪个片区">
+      </div>
+      <div class="fld">
+        <label>这次最想解决什么<span class="req">必填</span></label>
+        <div class="hint">一句话。客户问 AI 的时候把你说错了？还是压根不提你？</div>
+        <input id="f0goal" placeholder="AI 提到我们的时候说得不准">
+      </div>
+      <div class="fld">
+        <label>已有的 GEO 尝试</label>
+        <div class="hint">没做过就写「未做过」，不要为了好看编</div>
+        <input id="f0try" placeholder="未做过">
+      </div>
+      <div class="btn-row"><button class="btn btn-p" id="save0">保存档案</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- 2 外部对账 -->
+<section class="pg" id="s2" style="display:none">
+  <div class="card">
+    <div class="card-h"><span class="n">2</span><span class="t">外部说法对账</span><span class="st todo" id="st2">0 条待确认</span></div>
+    <div class="card-b">
+      <div class="alert" style="margin-bottom:18px">
+        <div class="ah">规则</div>
+        <p>联网搜到的信息只是「外面怎么说」，不是事实。<b>每条都要你点头才进库</b>，一条都不能跳过。</p>
+      </div>
+      <div id="cfArea"></div>
+      <div id="extList"></div>
+      <div class="btn-row">
+        <button class="btn btn-sm" id="addExt">+ 手动补一条外部说法</button>
+        <button class="btn btn-sm" id="addCf">+ 记一条冲突</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 3 购买意图 -->
+<section class="pg" id="s3" style="display:none">
+  <div class="card">
+    <div class="card-h"><span class="n">3</span><span class="t">客户购买意图</span><span class="st wait" id="st3">等你确认</span></div>
+    <div class="card-b">
+      <div class="alert" style="margin-bottom:18px">
+        <div class="ah">这一步不能跳</div>
+        <p>下面是按你的行业推的，<b>先看这几条是不是你客户真实在纠结的</b>。少了一条、多了一条，现在改成本最低——意图定了，字段才跟着定。</p>
+      </div>
+      <div id="intList"></div>
+      <div class="btn-row">
+        <button class="btn btn-sm" id="addInt">+ 补一条意图</button>
+        <button class="btn btn-p" id="confirmInt">确认这些意图，继续</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4 必填事实 -->
+<section class="pg" id="s4" style="display:none">
+  <div class="card-h" style="border-radius:3px 3px 0 0;border:1px solid var(--line);border-bottom:none">
+    <span class="n">4</span><span class="t">由意图推出的必填事实</span><span class="st wait" id="st4">等待意图确认</span>
+  </div>
+  <div id="fieldWrap"></div>
+  <div class="alert">
+    <div class="ah">入库标准</div>
+    <p>每条要回答一句话：<b>它能不能让 AI 在对应意图的客户提问下，说出一句有出处、不出错的话？</b>能，才算完成。答不上来就标为待补，别硬填。</p>
+  </div>
+</section>
+
+<!-- 6 更新待办 -->
+<section class="pg" id="s6" style="display:none">
+  <div class="card">
+    <div class="card-h"><span class="n">5</span><span class="t">更新待办</span><span class="st wait" id="st6">0 条到期</span></div>
+    <div class="card-b">
+      <div class="alert" style="margin-bottom:18px">
+        <div class="ah">提醒频率按每家企业自己的周期</div>
+        <p>这家企业的复核节奏写在 <code>待办.json</code> 里，跟 Agent 说「按这个企业的周期给我建个定时检查」就能到点提醒。没有定时任务时，靠打开这一页看今日待复核。</p>
+      </div>
+      <div id="todoList"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 8 变更记录 -->
+<section class="pg" id="s8" style="display:none">
+  <div class="card">
+    <div class="card-h"><span class="n">6</span><span class="t">变更记录</span><span class="st todo" id="st8">0 条</span></div>
+    <div class="card-b"><div id="logList"></div></div>
+  </div>
+</section>
+
+<!-- 7 同步 -->
+<section class="pg" id="s7" style="display:none">
+  <div class="card">
+    <div class="card-h"><span class="n">7</span><span class="t">同步到你的知识库工具</span><span class="st todo" id="st7">待执行</span></div>
+    <div class="card-b">
+      <div class="alert" style="margin-bottom:18px">
+        <div class="ah">这一步让成果进内容生产环节</div>
+        <p>库里躺着没人用，等于没做。同步前会先问你要写到哪，同步后回报条数。</p>
+      </div>
+
+      <div class="alert warn" style="margin-bottom:18px">
+        <div class="ah">先看连接状态</div>
+        <p id="connState">正在读取环境状态……</p>
+        <p style="margin-top:8px">页面自己探测不到 MCP 连接器（浏览器沙箱限制），状态由 Agent 探测后写入。看不到状态时，在对话里问 Agent「探一下我的连接器」即可。</p>
+      </div>
+
+      <div id="tgtList" class="tgts"></div>
+
+      <div class="fld" id="syncPathW" style="display:none">
+        <label>Obsidian vault 路径</label>
+        <input id="syncPath" placeholder="例如 /Users/你的用户名/Documents/MyVault">
+        <div class="hint">Obsidian 的 vault 就是本机一个文件夹，Agent 直接读写，<b>不需要装任何连接器</b>。填绝对路径。</div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-p" id="doSync">生成同步内容</button>
+        <button class="btn" id="copyMd">复制为 Markdown</button>
+      </div>
+      <div id="syncOut"></div>
+    </div>
+  </div>
+</section>
+
+<div class="foot">
+  <span>geo-kb · 数据存在本机浏览器，不上传</span>
+  <span id="footSt">—</span>
+  <span style="margin-left:auto">页面只做确认与核对· 联网检索与字段推导由 Agent 执行</span>
+</div>
+
+</main>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="mask" id="mask" style="display:none"><div class="modal" id="modal"></div></div>
+
+<script>
+// 主题：必须在首屏渲染前应用，否则会闪一下
+(function(){
+  var t=localStorage.getItem("geokb_theme")||"dark";
+  document.documentElement.setAttribute("data-t",t);
+})();
+function applyTheme(t){
+  document.documentElement.setAttribute("data-t",t);
+  try{localStorage.setItem("geokb_theme",t);}catch(e){}
+  paintThemeBtn();
+}
+var SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.4M12 19.6V22M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2 12h2.4M19.6 12H22M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>';
+var MOON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 14.2A8.5 8.5 0 1 1 9.8 3.5a7 7 0 0 0 10.7 10.7z"/></svg>';
+function paintThemeBtn(){
+  var b=document.getElementById("ttBtn");
+  if(!b)return;
+  var t=document.documentElement.getAttribute("data-t")==="light"?"dark":"light";
+  b.innerHTML=t==="light"?MOON:SUN;
+  b.title=(t==="light"?"切到明亮模式":"切到暗黑模式");
+}
+
+var S={ent:"",full:"",brand:"",web:"",biz:"",area:"",goal:"",try:""};
+var INT=[], EXT=[], FLD=[], TODO=[], LOG=[], CF=[], BLIND=[];
+
+/* ============================================================
+   数据层
+   数据源是 Agent 写在 geo-kb/data/<企业>/ 下的 JSON 文件。
+   浏览器打开本地 HTML 时无法直接读写旁边的文件（file:// 受限），
+   所以本页采用「导入文件 → 编辑 → 导出变更包 → Agent 写回」的方式。
+   localStorage 只作草稿，刷新不丢，但清缓存会丢——所以每次改动都会提醒导出。
+   ============================================================ */
+var DRAFT="geokb_draft_v1";
+var FILEKEY="geokb_filemeta_v1";
+var FIRM=null;          // 当前企业的简称
+var FROMFILE=false;     // 数据是否来自文件（而非草稿/示例）
+
+function load(){
+  try{
+    var r=localStorage.getItem(DRAFT);
+    if(r){var d=JSON.parse(r);
+      S.ent=d.ent||"";S.full=d.full||"";S.brand=d.brand||"";S.web=d.web||"";
+      S.biz=d.biz||"";S.area=d.area||"";S.goal=d.goal||"";S.try=d.try||"";
+      INT=d.INT||[];EXT=d.EXT||[];FLD=d.FLD||[];TODO=d.TODO||[];LOG=d.LOG||[];
+      CF=d.CF||[];BLIND=d.BLIND||[];
+      FIRM=d.FIRM||null;FROMFILE=!!d.FROMFILE;ENVT=d.ENVT||{t:null};
+    }
+  }catch(e){}
+  if(!INT.length&&!S.ent){seed();}
+}
+function save(){
+  try{localStorage.setItem(DRAFT,JSON.stringify({ent:S.ent,full:S.full,brand:S.brand,web:S.web,
+    biz:S.biz,area:S.area,goal:S.goal,try:S.try,INT:INT,EXT:EXT,FLD:FLD,TODO:TODO,LOG:LOG,
+    CF:CF,BLIND:BLIND,FIRM:FIRM,FROMFILE:FROMFILE,ENVT:ENVT}));}catch(e){}
+  paintSyncHint();
+}
+
+/* 把页面数据转成 Agent 的 JSON 文件结构 */
+function toFiles(){
+  var base=FIRM||"未命名企业";
+  var out={};
+  out[base+"/档案.json"]=JSON.stringify({
+    "_说明":"企业档案。第 0 步产出。",
+    "_schema":1,
+    "主体":{"工商全称":S.full||null,"常用品牌名":S.brand||null,"官网":S.web||null,
+      "主体是否已确认":!!(S.full||S.brand)},
+    "业务":{"主营业务":S.biz||null,"主要客户地区":S.area||null},
+    "目标":{"这次最想解决什么":S.goal||null,"已有的GEO尝试":S.try||"未做过",
+      "关注的AI产品":[],"现有可用记录":[]},
+    "客户提供的资料":[],"待确认事项":[]
+  },null,2);
+  out[base+"/意图.json"]=JSON.stringify({
+    "_说明":"客户购买意图。第 3 步产出。","_schema":1,
+    "客户确认日期":INT.length&&INT.every(function(x){return x.ok;})?d():null,
+    "意图":INT.map(function(x,i){
+      return {"id":x.id||("i"+(i+1)),"标题":x.t,"客户在意什么":x.c,"要做的判断":x.j,
+        "AI说错的后果":x.bad,"谁参与判断":x.who,"已确认":!!x.ok};
+    }),
+    "客户确认记录":{删了哪些:[],加了哪些:[],改写了哪些:[]}
+  },null,2);
+  out[base+"/事实.json"]=JSON.stringify({
+    "_说明":"事实库。入库标准：能不能让AI 说出一句有出处、不出错的话。","_schema":1,
+    "updated_at":new Date().toISOString(),
+    "事实":FLD.map(function(f,i){
+      return {"id":f.id||("f"+(i+1)),"对应意图":f.ints||[f.int],
+        "字段名":f.name,"为什么需要":f.why,"具体要求":f.req,
+        "事实内容":f.val||null,"来源类型":f.src||null,"证据":f.ev||null,
+        "更新责任人":f.own||null,"更新周期":f.cyc||null,
+        "最近复核":d(),"谁能提供这条":f.who||null,"已入库":!!f.done};
+    }),
+    "待补事实":FLD.filter(function(f){return !f.done;}).map(function(f){
+      return {"字段名":f.name,"为什么重要":f.why,"谁能提供":f.who||null,"状态":"待补"};
+    }),
+    "冲突记录":CF.filter(function(c){return !c.done;}).map(function(c){
+      return {"外部说法":c.a+" / "+c.b,"客户认为正确的是什么":c.q,"状态":"待解决"};
+    })
+  },null,2);
+  out[base+"/外部说法.json"]=JSON.stringify({
+    "_说明":"外部说法。第 1-2 步产出。未经客户确认不得进事实库。","_schema":1,
+    "检索日期":d(),
+    "条目":EXT.map(function(x,i){
+      return {"id":x.id||("e"+(i+1)),"来源类型":x.src,"来源名称":x.nm,
+        "来源分级":x.lv,"日期":x.dt,"链接":x.link||null,
+        "外部说法原文":x.q,"客户是否确认":x.st==="ok"?"已确认":(x.st==="conflict"?"冲突":"待确认"),
+        "冲突说明":x.note||null};
+    }),
+    "交叉比对结果":CF.map(function(c){
+      return {"比对项":c.item,"说法A":c.a,"说法B":c.b,
+        "要问客户什么":c.q,"已澄清":!!c.done};
+    }),
+    "客户盲区":BLIND.map(function(b){
+      return {"盲区":b.t,"依据":b.why,"客户决策":b.ans||null};
+    })
+  },null,2);
+  out[base+"/待办.json"]=JSON.stringify({
+    "_说明":"更新待办。第 6 步产出。会话开始时读这个文件。","_schema":1,
+    "企业提醒频率":{"频率":null,"是否已建定时任务":false},
+    "待复核":TODO.map(function(t){
+      return {"id":t.id,"内容":t.t,"责任人":t.who||null,
+        "更新周期":t.cyc||null,"应复核日":t.due,"已复核":!!t.ok};
+    }),
+    "待解决冲突":CF.filter(function(c){return !c.done;}).map(function(c){
+      return {"外部说法":c.a+" / "+c.b,"卡在哪":c.q,"状态":"待解决"};
+    })
+  },null,2);
+  out[base+"/更新记录.json"]=JSON.stringify({
+    "_说明":"变更记录。知识库每次改动都留痕。","_schema":1,
+    "版本":1,
+    "记录":LOG.map(function(l){
+      return {"日期":l.d,"变更类型":l.t,"条目":l.y||null,
+        "变更前":l.x||null,"变更后":l.y||null,"触发原因":l.p||null,"操作人":null};
+    })
+  },null,2);
+  // 环境状态是 Agent 探测写的，页面只原样带回，不改内容
+  if(ENVT.t)out[base+"/环境状态.json"]=JSON.stringify(ENVT.t,null,2);
+  return out;
+}
+
+/* 从 Agent 写的 JSON 文件导入（读档案.json 等） */
+function fromFiles(files, firm){
+  var got={};
+  for(var i=0;i<files.length;i++){
+    var name=files[i].name.replace(/\.json$/,"");
+    try{got[name]=JSON.parse(files[i].text);}catch(e){}
+  }
+  var K=Object.keys(got);
+  if(!K.length){toast("没读到有效的 JSON 文件");return false;}
+  FIRM=firm||FIRM||K[0].split("/")[0];
+  var pick=function(k){for(var i=0;i<K.length;i++){if(K[i].indexOf(k)>=0)return got[K[i]];}return null;};
+  var a=pick("档案");
+  if(a){
+    var z=a.主体||{};
+    S.full=z.工商全称||"";S.brand=z.常用品牌名||"";S.web=z.官网||"";
+    var b=a.业务||{};S.biz=b.主营业务||"";S.area=b.主要客户地区||"";
+    var g=a.目标||{};S.goal=g.这次最想解决什么||"";S.try=g.已有的GEO尝试||"";
+  }
+  var it=pick("意图");
+  if(it&&it.意图){INT=it.意图.map(function(x){
+    return {id:x.id,t:x.标题,c:x["客户在意什么"],j:x["要做的判断"],
+      bad:x["AI说错的后果"],who:x.谁参与判断,ok:!!x.已确认};});}
+  var f=pick("事实");
+  if(f&&f.事实){FLD=f.事实.map(function(x){
+    return {id:x.id,ints:x.对应意图||[x.对应意图],name:x.字段名,why:x.为什么需要,
+      req:x.具体要求,val:x.事实内容||"",src:x.来源类型,ev:x.证据,
+      own:x.更新责任人,cyc:x.更新周期,who:x.谁能提供这条,done:!!x.已入库};});}
+  var e=pick("外部说法");
+  if(e){
+    EXT=(e.条目||[]).map(function(x){
+      return {id:x.id,src:x.来源类型,nm:x.来源名称,lv:x.来源分级,dt:x.日期,
+        link:x.链接,q:x.外部说法原文,
+        st:x.客户是否确认==="已确认"?"ok":(x.客户是否确认==="冲突"?"conflict":"wait"),
+        note:x.冲突说明};});
+    CF=(e.交叉比对结果||[]).map(function(x,i){
+      return {id:"c"+(i+1),item:x.比对项,a:x.说法A,b:x.说法B,q:x.要问客户什么,done:!!x.已澄清};});
+    BLIND=(e.客户盲区||[]).map(function(x,i){
+      return {id:"b"+(i+1),t:x.盲区,d:null,why:x.依据,done:!!x.客户决策,ans:x.客户决策};});
+  }
+  var t=pick("待办");
+  if(t)TODO=(t.待复核||[]).map(function(x){
+    return {id:x.id,t:x.内容,who:x.责任人,cyc:x.更新周期,due:x.应复核日,ok:!!x.已复核};});
+  var l=pick("更新记录");
+  if(l)LOG=(l.记录||[]).map(function(x){
+    return {d:x.日期,t:x.变更类型,x:x.变更前,y:x.变更后,p:x.触发原因};});
+  var en=pick("环境状态");
+  if(en){ENVT.t=en;renderTgt();}
+  FROMFILE=true;
+  save();refreshAll();
+  toast("已导入 "+K.length+" 个文件",true);
+  return true;
+}
+
+function d(){return new Date().toISOString().slice(0,10);}
+function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+
+/* 示例数据：虚构客户，首次打开先看懂结构 */
+function seed(){
+  S.ent="示例连锁咖啡（示例数据）";S.full="示例市××餐饮管理有限公司（示例）";
+  S.brand="示例咖啡";S.web="";S.biz="意式系列现磨、风味系列预制冷萃与气泡饮";
+  S.area="示例市城东商圈";S.goal="AI 提到我们的时候会说我们做全品类手冲";
+  S.try="未做过";
+  EXT=[
+    {id:"e1",src:"第三方平台",nm:"某本地生活平台商家页",lv:"C",dt:"2026-01-15",
+     q:"示例咖啡是本地精品烘焙品牌，主打全套精品手冲。",
+     st:"wait",note:"烘焙是代工，我们自己不做烘焙"},
+    {id:"e2",src:"地图点评",nm:"地图平台商户页",lv:"C",dt:"2026-01-20",
+     q:"示例咖啡 人均 35 元，营业时间 08:00-22:00，支持插座，适合办公。",
+     st:"wait",note:"人均和营业时间都对，插座只在一二楼有"},
+    {id:"e3",src:"官网",nm:"官网首页",lv:"A",dt:"2026-02-01",
+     q:"示例咖啡坚持每日现磨，所有饮品均为门店手工制作。",
+     st:"wait",note:"风味系列是预制的，这句要改"}
+  ];
+  INT=[
+    {id:"i1",t:"这杯咖啡和我平时喝的不一样在哪",c:"怕花了钱喝不到期待的品质",
+     j:"值不值得为这杯咖啡换一家店",
+     bad:"AI 说「精品手冲」，客户来喝发现是速溶兑热水，失望且不再回购",
+     who:"本人（单人决策，复购型）",ok:false},
+    {id:"i2",t:"附近有没有能久坐不赶人的店",c:"能不能坐着办公、见朋友，不要被赶",
+     j:"这家店适不适合我今天的目的",
+     bad:"AI 说「适合办公」，客户来了发现插座少、有最低消费、限时杯，产生纠纷",
+     who:"本人",ok:false},
+    {id:"i3",t:"第一次进店点单会不会踩雷",c:"不会喝错、不会被推销",
+     j:"第一次来怎么点最稳",
+     bad:"AI 推荐的款客户觉得太苦或太甜，直接放弃",
+     who:"本人",ok:false}
+  ];
+  FLD=[
+    {id:"f1",int:"i1",name:"哪些是现磨、哪些是预制",why:"AI 默认咖啡店都是现磨，说错就是错答",
+     req:"写清哪些饮品现磨、哪些预制，不要笼统说「手工制作」",
+     val:"示例咖啡的意式系列为门店现磨；风味系列中的冷萃与气泡系列为预制风味饮品，非现磨。这两类制作方式不同。",
+     src:"企业自述",ev:"内部产品标准 2026-01",own:"产品负责人",cyc:"每季",done:true},
+    {id:"f2",int:"i2",name:"适合久坐吗有什么条件",why:"AI 说「适合办公」客户来了发现插座少、有最低消费",
+     req:"写清哪些店有插座、有没有最低消费、高峰时段是否需要等位",
+     val:"示例咖啡的门店提供座位与插座，适合办公与久坐；工作日 14:00 后与周末全天为高峰时段，可能需要等位。门店有最低消费，商务套餐除外。",
+     src:"客户原件",ev:"门店服务说明 2026-02",own:"门店运营负责人",cyc:"每月",done:true},
+    {id:"f3",int:"i3",name:"点单不会踩雷的推荐",why:"AI 推荐了款但客户觉得太苦或太甜，直接放弃",
+     req:"写清哪款适合第一次喝、哪款客户普遍反馈好",
+     val:"",src:"企业自述",ev:"",own:"产品负责人",cyc:"每季",done:false},
+    {id:"f4",int:"i1",name:"豆子的产地与品种",why:"AI 被问「豆子哪来的」答不出，影响「品质如何」的判断",
+     req:"写清当周在用的豆名与产地",
+     val:"",src:"企业自述",ev:"",own:"产品负责人",cyc:"每季",done:false},
+    {id:"f5",int:"i2",ints:["i2","i3"],name:"门店数量与分布",why:"AI 被问「附近有几家」答不出，影响「去哪一家」的判断",
+     req:"写清各店地址与营业时间",
+     val:"",src:"企业自述",ev:"",own:"运营负责人",cyc:"每季",done:false}
+  ];
+  TODO=[];
+  CF=[
+    {id:"c1",item:"月卡价格",a:"199元（活动网·宝山天街店）",b:"239元（活动网·吉浦湾店）",
+     q:"两个页面都写「全国统一定价」，同城两家店却不一样。到底是全国统一，还是按门店定价？",done:false},
+    {id:"c2",item:"私教单节价格",a:"200-300元（场馆平台）",b:"178元挂牌（美团商品页）",
+     q:"电商挂牌价比场馆区间低。是促销价，还是常态价？AI 报哪个都不对，要怎么说？",done:false},
+    {id:"c3",item:"成立年份",a:"2015年（多个榜单站）",b:"2019年（IHRSA榜单年份）",
+     q:"IHRSA 那个是 2019 年的榜单，不是成立年份吧？",done:false}
+  ];
+  BLIND=[
+    {id:"b1",t:"子品牌矩阵",d:"乐刻健身（自助）/ FEELINGME 私教馆 / RECORE（高端）/ LITTA（线上训练营）",
+     why:"来源：榜单站 + 虎嗅报道。你没提，但 AI 会用",done:false},
+    {id:"b2",t:"卖教练培训",d:"21天系统理论课 ¥19、健身教练考证与就业",
+     why:"来源：美团商品页。这是你的一条业务线，你自己可能没当回事",done:false},
+    {id:"b3",t:"国家举重队官方合作伙伴",d:"2025 年起",
+     why:"来源：品牌介绍页。可核验，但客户没提",done:false}
+  ];
+  LOG=[{d:"2026-02-16",t:"示例知识库初始化",x:"",y:"含 5 条待补事实、3 条待确认外部说法",p:""}];
+  save();
+}
+
+/* 计算层 */
+function stats(){
+  var intOk=INT.filter(function(x){return x.ok;}).length;
+  var fDone=FLD.filter(function(x){return x.done;}).length;
+  var extWait=EXT.filter(function(x){return x.st==="wait";}).length;
+  var cfOpen=CF.filter(function(x){return !x.done;}).length;
+  var blOpen=BLIND.filter(function(b){return !b.done;}).length;
+  var due=TODO.filter(function(x){return !x.ok;}).length;
+  var subs=[];
+  if(!S.full&&!S.brand) subs.push("还没填企业档案");
+  if(cfOpen) subs.push(cfOpen+" 处冲突等你澄清");
+  if(blOpen) subs.push(blOpen+" 条盲区等你决策");
+  if(extWait) subs.push(extWait+" 条外部说法等你认");
+  if(INT.length&&intOk<INT.length) subs.push("购买意图还没确认");
+  if(FLD.length&&fDone<FLD.length) subs.push((FLD.length-fDone)+" 条事实待填");
+  if(due) subs.push(due+" 条到期待复核");
+  return {intOk:intOk,fDone:fDone,extWait:extWait,due:due,subs:subs,cfOpen:cfOpen,blOpen:blOpen};
+}
+
+/* 渲染层 */
+function renderToday(){
+  var s=stats(),el=document.getElementById("todayTxt");
+  if(!s.subs.length){el.innerHTML="没有待处理事项。可以进入第 7 步同步出去了。";return;}
+  el.innerHTML="轮到你了：<b>"+s.subs.join("</b> · <b>")+"</b>。";
+  var st=document.getElementById("st0");
+  st.className="st "+((S.full||S.brand)?"ok":"todo");
+  st.textContent=(S.full||S.brand)?"已填":"未开始";
+  var s2=document.getElementById("st2");
+  s2.className="st "+((s.extWait||s.cfOpen)?"wait":"ok");
+  s2.textContent=(s.extWait?(s.extWait+" 条待确认"):"")+(s.cfOpen?(" · 冲突 "+s.cfOpen):"")||((s.extWait||s.cfOpen)?"":"已处理");
+  var s3=document.getElementById("st3");
+  s3.className="st "+(INT.length&&s.intOk===INT.length?"ok":"wait");
+  s3.textContent=INT.length?(s.intOk+"/"+INT.length+" 已确认"):"等你确认";
+  var s4=document.getElementById("st4");
+  s4.className="st "+(s.fDone===FLD.length&&FLD.length?"ok":"wait");
+  s4.textContent=FLD.length?(s.fDone+"/"+FLD.length+" 已入库"):"等待意图确认";
+  var s6=document.getElementById("st6");
+  s6.className="st "+(s.due?"wait":"ok");
+  s6.textContent=s.due?(s.due+" 条到期"):"无到期";
+  document.getElementById("st8").textContent=LOG.length+" 条";
+  document.getElementById("footSt").textContent="意图 "+s.intOk+"/"+INT.length+" · 事实 "+s.fDone+"/"+FLD.length+" · 冲突 "+s.cfOpen+" · 盲区 "+s.blOpen;
+}
+
+function renderExt(){
+  var el=document.getElementById("extList");
+  if(!EXT.length){el.innerHTML='<div class="empty"><div class="big">还没有外部说法</div>在对话里跟 Agent 说「搜一下这家企业」<br>检索结果会自动出现在这里</div>';return;}
+  el.innerHTML=EXT.map(function(x){
+    var cls=x.st==="wait"?"":(x.st==="conflict"?"cf":"gap");
+    var tag=x.st==="wait"?"待确认":(x.st==="ok"?"已入库":(x.st==="conflict"?"冲突":"缺口"));
+    return '<div class="ext '+cls+'">'+
+      '<div class="eh"><span class="sn">'+esc(x.nm)+'</span>'+
+      '<span class="lv '+esc(x.lv)+'">'+esc(x.src)+' · '+esc(x.lv)+'级</span>'+
+      '<span class="st '+(x.st==="wait"?"wait":"ok")+'">'+tag+'</span></div>'+
+      '<div class="qt">'+esc(x.q)+'</div>'+
+      (x.note?'<div class="mm"><span>客户认为：'+esc(x.note)+'</span></div>':'')+
+      '<div class="mm"><span>抓取 '+esc(x.dt)+'</span>'+(x.link?'<a href="'+esc(x.link)+'" target="_blank" rel="noopener">'+esc(x.link)+'</a>':'')+'</div>'+
+      (x.st==="wait"?'<div class="btn-row" style="margin-top:12px">'+
+        '<button class="btn btn-sm btn-p" data-eo="'+x.id+'">认，写入事实库</button>'+
+        '<button class="btn btn-sm" data-ec="'+x.id+'">不认，标为冲突</button>'+
+        '<button class="btn btn-sm" data-eg="'+x.id+'">我也不知道，列缺口</button>'+
+        '</div>':'')+
+      '</div>';
+  }).join("");
+}
+
+function renderInt(){
+  var el=document.getElementById("intList");
+  if(!INT.length){el.innerHTML='<div class="empty"><div class="big">还没有购买意图</div>先填好第 1 步的企业档案<br>然后跟 Agent 说「推导客户购买意图」</div>';return;}
+  el.innerHTML=INT.map(function(x){
+    return '<div class="ii"><div><div class="tt">'+esc(x.t)+'</div>'+
+      '<div class="qq">在意 <b>'+esc(x.c)+'</b> · 判断 <b>'+esc(x.j)+'</b><br>'+
+      '说错后果 <b>'+esc(x.bad)+'</b> · '+esc(x.who)+'</div></div>'+
+      '<span class="st '+(x.ok?"ok":"wait")+'">'+(x.ok?"已确认":"待确认")+'</span></div>';
+  }).join("");
+}
+
+function renderFld(){
+  var el=document.getElementById("fieldWrap");
+  if(!FLD.length){el.innerHTML='<div class="card"><div class="empty"><div class="big">还没有必填事实</div>先在第 3 步确认购买意图，字段是从意图推出来的<br>或跟 Agent 说「按已确认的意图推导字段」</div></div>';return;}
+  el.innerHTML=INT.map(function(it){
+    var rows=FLD.filter(function(f){return (f.ints||[f.int]).indexOf(it.id)>=0;});
+    if(!rows.length)return "";
+    return '<div class="drv"><div class="drv-h">来自意图 · '+esc(it.t)+'</div><div class="drv-b">'+
+      rows.map(function(f){
+        var ints=f.ints||[f.int];
+        if(ints[0]!==it.id){
+          // 非首个意图：只显示引用，不重复渲染表单
+          var first=INT.filter(function(x){return x.id===ints[0];})[0];
+          return '<div class="fld dup"><div class="dupbox">此条同时服务于其他意图：'+
+            esc(ints.slice(1).map(function(x){var n=INT.filter(function(y){return y.id===x;})[0];return n?n.t:x;}).join("、"))+
+            '，在「'+(first?first.t:ints[0])+'」下填写</div></div>';
+        }
+        var ok=f.val&&f.ev&&f.own&&f.cyc;
+        var multi=ints.length>1?'<span class="mtag" title="一条事实可服务多个意图">同时服务 '+ints.length+' 个意图</span>':"";
+        return '<div class="fld">'+
+          '<label>'+esc(f.name)+multi+(ok?'<span class="st ok" style="margin-left:8px">已入库</span>':'')+'</label>'+
+          '<div class="hint why">为什么需要：'+esc(f.why)+'</div>'+
+          '<div class="hint">'+esc(f.req)+'</div>'+
+          '<textarea data-f="'+f.id+'" placeholder="一句话，能被 AI 独立引用。不要写成整段介绍">'+esc(f.val)+'</textarea>'+
+          '<div class="meta">'+
+          '<div style="flex:1;min-width:130px"><label>来源类型</label><input data-fs="'+f.id+'" value="'+esc(f.src||"")+'" placeholder="企业自述"></div>'+
+          '<div style="flex:1;min-width:150px"><label>证据</label><input data-fe="'+f.id+'" value="'+esc(f.ev||"")+'" placeholder="文件名或链接"></div>'+
+          '</div>'+
+          '<div class="meta">'+
+          '<div style="flex:1;min-width:110px"><label>更新责任人</label><input data-fw="'+f.id+'" value="'+esc(f.own||"")+'" placeholder="具体的人"></div>'+
+          '<div style="flex:1;min-width:110px"><label>更新周期</label><input data-fc="'+f.id+'" value="'+esc(f.cyc||"")+'" placeholder="每季"></div>'+
+          '</div>'+
+          (ok?'':'<div class="miss">还缺：'+[!f.val?"事实内容":null,!f.ev?"证据":null,!f.own?"责任人":null,!f.cyc?"周期":null].filter(Boolean).join(" · ")+'</div>')+
+          '</div>';
+      }).join("")+'</div></div>';
+  }).join("");
+}
+
+function renderTodo(){
+  var el=document.getElementById("todoList");
+  if(!TODO.length){el.innerHTML='<div class="empty"><div class="big">没有到期的条目</div>事实入库时会按更新周期自动生成待办<br>价格、档期、名额、师资这类建议标短周期</div>';return;}
+  var today=d();
+  el.innerHTML=TODO.map(function(t){
+    var over=t.due<today;
+    return '<div class="todo-row'+(over?" over":"")+'">'+
+      '<span class="tt">'+esc(t.t)+'</span>'+
+      '<span class="dd">'+esc(t.who||"未指定责任人")+' · '+esc(t.cyc||"")+'</span>'+
+      '<span class="due">'+(over?"已逾期":"待复核")+' '+esc(t.due)+'</span>'+
+      '<button class="btn btn-sm" data-td="'+t.id+'">标已复核</button></div>';
+  }).join("");
+}
+
+function renderLog(){
+  var el=document.getElementById("logList");
+  if(!LOG.length){el.innerHTML='<div class="empty"><div class="big">还没有变更记录</div>每次新增入库、内容修正、冲突处理都会在这里留痕</div>';return;}
+  el.innerHTML=LOG.slice().reverse().map(function(l){
+    return '<div class="log"><div class="ld">'+esc(l.d)+'</div><div class="lb">'+
+      '<div class="lt">'+esc(l.t)+'</div>'+
+      (l.x||l.y?'<div class="lx"><s>'+esc(l.x)+'</s> <b>'+esc(l.y)+'</b></div>':'')+
+      '</div></div>';
+  }).join("");
+}
+
+/* 冲突区（独立渲染，不被renderExt 调用） */
+function renderCf(){
+  var el=document.getElementById("cfArea");
+  if(!CF.length){el.innerHTML="";return;}
+  var open=CF.filter(function(x){return !x.done;});
+  var html='<div class="card" style="margin-bottom:16px;border-color:var(--rd)">'+
+    '<div class="card-h" style="background:var(--rd-bg)"><span class="n" style="color:var(--rd)">交叉比对</span>'+
+    '<span class="t">'+open.length+' 处冲突等你澄清</span>'+
+    '<span class="st '+(open.length?"todo":"ok")+'">'+(open.length?"未处理":"已澄清")+'</span></div>'+
+    '<div class="card-b" style="padding:14px 16px">';
+  html+=CF.map(function(x){
+    return '<div class="cf'+(x.done?" done":"")+'">'+
+      '<div class="ch2"><span class="ci">'+esc(x.item)+'</span>'+
+      '<span class="st '+(x.done?"ok":"todo")+'">'+(x.done?"已澄清":"待澄清")+'</span></div>'+
+      '<div class="cmp"><div class="side">'+esc(x.a)+'</div><div class="vs">≠</div><div class="side">'+esc(x.b)+'</div></div>'+
+      '<div class="q2">要问客户：<b>'+esc(x.q)+'</b></div>'+
+      (x.done?'':'<div class="btn-row" style="margin-top:0"><button class="btn btn-sm btn-p" data-cfd="'+x.id+'">已澄清，记入事实库</button></div>')+
+      '</div>';
+  }).join("");
+  el.innerHTML=html+'</div></div>';
+}
+
+/* 盲区区 */
+function renderBlind(){
+  if(!BLIND.length) return;
+  var el=document.getElementById("extList");
+  var pending=BLIND.filter(function(b){return !b.done;});
+  var block='<div class="card" style="margin-bottom:16px;border-color:var(--am)">'+
+    '<div class="card-h" style="background:var(--am-bg)"><span class="n" style="color:var(--am)">客户盲区</span>'+
+    '<span class="t">'+pending.length+' 条你可能没意识到</span>'+
+    '<span class="st '+(pending.length?"todo":"ok")+'">'+(pending.length?"等你决策":"已决策")+'</span></div>'+
+    '<div class="card-b" style="padding:14px 16px">';
+  block+=BLIND.map(function(b){
+    var opts=[["","准确，我要补充"],["keep","准确，但不想主动提"],["fix","不准确，我来纠正"],["dk","我也不知道"]];
+    return '<div class="blind'+(b.done?" done":"")+'">'+
+      '<div class="bh"><span class="bi">'+esc(b.t)+'</span>'+
+      (b.done&&b.ans?'<span class="st ok">'+esc(b.ans)+'</span>':'')+'</div>'+
+      '<div class="bd2">'+esc(b.d)+'</div>'+
+      '<div class="why">'+esc(b.why)+'</div>'+
+      (b.done?'':'<div class="opts">'+opts.map(function(o){
+        return '<button class="opt" data-bl="'+b.id+'" data-v="'+esc(o[1])+'">'+esc(o[1])+'</button>';
+      }).join("")+'</div>')+
+      '</div>';
+  }).join("");
+  el.innerHTML=block+'</div></div>'+el.innerHTML;
+}
+
+/* 统一刷新 */
+function refreshAll(){renderToday();renderCf();renderExt();renderInt();renderFld();renderTodo();renderLog();renderTgt();}
+
+var PAGES={s0:["企业档案","第 1 步 · 拿基本信息"],s2:["外部对账","第 2 步 · 逐条对账：认了才算事实"],
+  s3:["客户购买意图","第 3 步 · 先确认意图，不确认不往下走"],s4:["必填事实","第 4 步 · 从意图推出该填什么"],
+  s6:["更新待办","第 5 步 · 知识库是长期资产"],s8:["变更记录","第 6 步 · 改了什么、为什么、谁改的"],
+  s7:["同步知识库","第 7 步 · 让成果进内容生产环节"]};
+function go(p){
+  Object.keys(PAGES).forEach(function(k){document.getElementById(k).style.display=(k===p)?"":"none";});
+  document.querySelectorAll(".side a").forEach(function(a){a.className=(a.getAttribute("data-p")===p)?"on":"";});
+  document.getElementById("ptitle").textContent=PAGES[p][0];
+  document.getElementById("pd").textContent=PAGES[p][1];
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+function addLog(t,x,y){LOG.push({d:d(),t:t,x:x||"",y:y||"",p:""});}
+
+/* 弹窗 */
+function modal(html){document.getElementById("modal").innerHTML=html;document.getElementById("mask").style.display="flex";}
+
+/* 同步目标卡片 */
+/* 同步状态提示：告诉用户草稿还没写回文件 */
+function paintSyncHint(){
+  var el=document.getElementById("syncHint");
+  if(!el)return;
+  if(!FIRM&&!FROMFILE){
+    el.className="hint";
+    el.textContent="示例数据 · 可直接改";
+    return;
+  }
+  el.className="hint"+(FROMFILE?"":" warn");
+  el.textContent=FROMFILE
+    ? ("已从「"+(FIRM||"文件")+"」导入 · 改完请导出变更包")
+    : "草稿模式 · 改完导出交给 Agent 写回";
+}
+
+/* 导出变更包：生成一个 Agent 能直接写文件的 JSON */
+function exportPack(){
+  var files=toFiles();
+  var firm=FIRM||"未命名企业";
+  var pack={};
+  Object.keys(files).forEach(function(k){pack[k]=files[k];});
+  var text=JSON.stringify({
+    "_说明":"把下面这份内容交给 Agent，它会写入 geo-kb/data/"+firm+"/ 下的同名文件。",
+    "_企业":firm,
+    "_导出时间":new Date().toISOString(),
+    "文件":pack
+  },null,2);
+  var blob=new Blob([text],{type:"application/json;charset=utf-8"});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement("a");
+  a.href=url;
+  a.download=firm+"-变更包-"+d()+".json";
+  document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(url);document.body.removeChild(a);},1000);
+  // 同时把内容放进弹窗，方便直接复制给 Agent
+  openExportModal(text,firm);
+}
+
+function openExportModal(text,firm){
+  MASK=document.getElementById("mask");
+  document.getElementById("modal").innerHTML=
+    '<div class="mh"><h3>变更包已生成</h3><button class="x" data-c>×</button></div>'+
+    '<div class="msub">'+txt(firm)+' · '+Object.keys(toFiles()).length+' 个文件 · 已同时下载</div>'+
+    '<div class="note">把下面内容<b>整段复制给 Agent</b>，它会写回 <code>geo-kb/data/'+txt(firm)+'/</code>。这是本地文件，浏览器不能直接写入，所以这一步需要你递一次。</div>'+
+    '<textarea id="expText" style="width:100%;height:260px;font-family:var(--mono);font-size:11.5px;'+
+    'background:var(--bg);color:var(--tx);border:1px solid var(--line2);border-radius:2px;padding:10px;'+
+    'line-height:1.6;resize:vertical">'+txt(text)+'</textarea>'+
+    '<div class="mf"><button class="cancel" data-c>关闭</button>'+
+    '<button class="btn-p" id="copyExp">复制全部</button></div>';
+  MASK.style.display="flex";
+}
+function closeM(){document.getElementById("mask").style.display="none";}
+var toastT=null;
+function toast(msg,ok){
+  var el=document.getElementById("toast");
+  el.textContent=msg;
+  el.className="toast on"+(ok?" ok":"");
+  if(toastT)clearTimeout(toastT);
+  toastT=setTimeout(function(){el.className="toast"+(ok?" ok":"");},2600);
+}
+
+document.addEventListener("click",function(e){
+  var t;
+  if(e.target.closest("#btnImport")){
+    document.getElementById("fileInput").click();
+    return;}
+  if(e.target.closest("#btnExport")){exportPack();return;}
+  if(e.target.closest("#copyExp")){
+    var ta=document.getElementById("expText");
+    navigator.clipboard.writeText(ta.value).then(function(){
+      toast("已复制，粘给 Agent 即可",true);}).catch(function(){toast("复制失败，请手动全选复制");});
+    return;}
+  if(e.target.closest("#ttBtn")){
+  var cur=document.documentElement.getAttribute("data-t");
+  applyTheme(cur==="light"?"dark":"light");
+  return;}
+  if((t=e.target.closest("[data-p]"))){go(t.getAttribute("data-p"));return;}
+  if((t=e.target.closest("[data-cfd]"))){
+    var c=CF.filter(function(v){return v.id===t.getAttribute("data-cfd");})[0];
+    c.done=true;addLog("澄清冲突",c.item+"："+c.a+" / "+c.b,"客户已澄清");
+    save();refreshAll();return;}
+  if((t=e.target.closest("[data-bl]"))){
+    var b=BLIND.filter(function(v){return v.id===t.getAttribute("data-bl");})[0];
+    b.done=true;b.ans=t.getAttribute("data-v");
+    if(b.ans==="我也不知道"){
+      TODO.push({id:"t"+Date.now()+b.id,t:"确认盲区信息："+b.t,who:"",cyc:"一次性",due:d(),ok:false});
+    }
+    addLog("盲区决策",b.t,b.ans);
+    save();refreshAll();return;}
+  if((t=e.target.closest("[data-eo]"))){
+    var x=EXT.filter(function(v){return v.id===t.getAttribute("data-eo");})[0];
+    x.st="ok";x.note=x.note||"";addLog("外部说法入库","外部："+x.q,"客户确认："+(x.note||"与外部一致"));
+    save();refreshAll();return;}
+  if((t=e.target.closest("[data-ec]"))){
+    var y=EXT.filter(function(v){return v.id===t.getAttribute("data-ec");})[0];
+    y.st="conflict";addLog("标记冲突","外部："+y.q,"客户不认，待纠正");save();refreshAll();return;}
+  if((t=e.target.closest("[data-eg]"))){
+    var z=EXT.filter(function(v){return v.id===t.getAttribute("data-eg");})[0];
+    z.st="gap";z.note=z.note||"客户也不确定";
+    TODO.push({id:"t"+Date.now(),t:"确认外部说法："+z.nm,who:"",cyc:"一次性",due:d(),ok:false});
+    addLog("列为缺口","外部："+z.q,"客户也不知道，需补");save();refreshAll();return;}
+  if((t=e.target.closest("[data-td]"))){
+    var tk=TODO.filter(function(v){return v.id===t.getAttribute("data-td");})[0];
+    tk.ok=true;addLog("复核完成",tk.t,"已确认内容仍然准确");save();refreshAll();return;}
+  if(e.target.closest("#save0")){
+    S.full=document.getElementById("f0full").value.trim();
+    S.brand=document.getElementById("f0brand").value.trim();
+    S.web=document.getElementById("f0web").value.trim();
+    S.biz=document.getElementById("f0biz").value.trim();
+    S.area=document.getElementById("f0area").value.trim();
+    S.goal=document.getElementById("f0goal").value.trim();
+    S.try=document.getElementById("f0try").value.trim();
+    S.ent=S.ent||S.brand;
+    if(!S.brand&&!S.full){toast("至少填品牌名或工商全称");return;}
+    addLog("保存企业档案","",S.brand||S.full);
+    save();refreshAll();go("s2");return;}
+  if(e.target.closest("#confirmInt")){
+    INT.forEach(function(x){x.ok=true;});
+    addLog("确认购买意图",INT.length+" 条","进入字段推导");save();refreshAll();go("s4");return;}
+  if(e.target.closest("#addInt")){
+    modal('<h3>补一条购买意图</h3><div class="msub">先写客户在意什么，其余在保存后补</div>'+
+      '<div class="fld"><label>客户在意什么</label><input id="nc" placeholder="例：怕买了之后没人管"></div>'+
+      '<div class="fld"><label>他要做哪个判断</label><input id="nj" placeholder="例：这家公司靠不靠谱"></div>'+
+      '<div class="fld"><label>AI 说错的后果</label><textarea id="nb" placeholder="具体会发生什么，不要写「影响品牌形象」"></textarea></div>'+
+      '<div class="fld"><label>标题（把在意的事写成一句话）</label><input id="nt" placeholder="例：出了问题找不到人"></div>'+
+      '<div class="btn-row"><button class="btn" id="mc">取消</button><button class="btn btn-p" id="mo">保存</button></div>');
+    return;}
+  if(e.target.closest("#mo")){
+    var tt=document.getElementById("nt").value.trim();
+    if(!tt){toast("先写标题");return;}
+    INT.push({id:"i"+Date.now(),t:tt,c:document.getElementById("nc").value.trim(),
+      j:document.getElementById("nj").value.trim(),bad:document.getElementById("nb").value.trim(),
+      who:"本人",ok:false});
+    addLog("新增购买意图","",tt);save();closeM();refreshAll();return;}
+  if(e.target.closest("#mc")){closeM();return;}
+  if(e.target.closest("#addCf")){
+    modal('<h3>记一处冲突</h3><div class="msub">同一个问题在两个来源里说法不一样，就记一条</div>'+
+      '<div class="fld"><label>冲突的是什么</label><input id="fi" placeholder="例：月卡价格"></div>'+
+      '<div class="fld"><label>说法 A</label><input id="fa" placeholder="199元（某平台·某店）"></div>'+
+      '<div class="fld"><label>说法 B</label><input id="fb" placeholder="239元（某平台·另一店）"></div>'+
+      '<div class="fld"><label>要问客户什么</label><textarea id="fq" placeholder="转成一句具体的问法，不要写「数据不一致」">例：两个页面都写全国统一，同城两家店却不一样。到底是全国统一还是按门店定价？</textarea></div>'+
+      '<div class="btn-row"><button class="btn" id="mc">取消</button><button class="btn btn-p" id="co">保存</button></div>');
+    return;}
+  if(e.target.closest("#co")){
+    var qi=document.getElementById("fi").value.trim();
+    if(!qi){toast("先写冲突的是什么");return;}
+    CF.push({id:"c"+Date.now(),item:qi,a:document.getElementById("fa").value.trim()||"未填",
+      b:document.getElementById("fb").value.trim()||"未填",q:document.getElementById("fq").value.trim(),done:false});
+    addLog("记录冲突","",qi);save();closeM();refreshAll();return;}
+  if(e.target.closest("#addExt")){
+    modal('<h3>补一条外部说法</h3><div class="msub">原文照抄，不要概括。概括会把不确定性抹掉</div>'+
+      '<div class="fld"><label>来源类型</label><input id="es" placeholder="官网 / 第三方平台 / 地图点评 / 媒体报道"></div>'+
+      '<div class="fld"><label>来源名称</label><input id="en" placeholder="例：某本地生活平台商家页"></div>'+
+      '<div class="fld"><label>来源分级</label><input id="el" value="C" placeholder="A官方 / A媒体 / B行业数据 / C自媒体"></div>'+
+      '<div class="fld"><label>原文</label><textarea id="eq" placeholder="照抄看到的内容"></textarea></div>'+
+      '<div class="fld"><label>链接</label><input id="ek" placeholder="https://"></div>'+
+      '<div class="btn-row"><button class="btn" id="mc">取消</button><button class="btn btn-p" id="eo2">保存</button></div>');
+    return;}
+  if(e.target.closest("#eo2")){
+    var q=document.getElementById("eq").value.trim();
+    if(!q){toast("原文不能为空");return;}
+    EXT.push({id:"e"+Date.now(),src:document.getElementById("es").value.trim()||"未标注",
+      nm:document.getElementById("en").value.trim()||"未命名",lv:document.getElementById("el").value.trim()||"C",
+      dt:d(),q:q,link:document.getElementById("ek").value.trim(),st:"wait",note:""});
+    addLog("登记外部说法","",q.slice(0,40));save();closeM();refreshAll();return;}
+  if(e.target.closest("#doSync")){doSync();return;}
+  if(e.target.closest("#copyMd")){copyMd();return;}
+  if((t=e.target.closest("#copyMd2"))){doCopy(t);return;}
+});
+document.getElementById("mask").addEventListener("click",function(e){if(e.target===this)closeM();});
+
+/* 导入：读 Agent 写好的 JSON 文件 */
+document.getElementById("fileInput").addEventListener("change",function(e){
+  var fs=Array.prototype.slice.call(e.target.files||[]);
+  if(!fs.length)return;
+  var firm=prompt("这些文件属于哪家企业？\n（企业简称，用于后续导出时的目录名）",FIRM||"我的企业");
+  if(firm===null){e.target.value="";return;}
+  var left=fs.length, got=[];
+  fs.forEach(function(f){
+    var r=new FileReader();
+    r.onload=function(){
+      got.push({name:f.name,text:String(r.result)});
+      if(--left===0){
+        fromFiles(got,firm.trim()||"我的企业");
+        e.target.value="";
+      }
+    };
+    r.readAsText(f,"utf-8");
+  });
+});
+
+/* 事实编辑 */
+document.addEventListener("input",function(e){
+  var el=e.target;
+  if(el.dataset.f){var f=FLD.filter(function(v){return v.id===el.dataset.f;})[0];
+    f.val=el.value;var ok=f.val&&f.ev&&f.own&&f.cyc;f.done=!!ok;
+    save();renderToday();return;}
+  if(el.dataset.fs){FLD.filter(function(v){return v.id===el.dataset.fs;})[0].src=el.value;save();return;}
+  if(el.dataset.fe){var g=FLD.filter(function(v){return v.id===el.dataset.fe;})[0];
+    g.ev=el.value;g.done=!!(g.val&&g.ev&&g.own&&g.cyc);save();renderToday();return;}
+  if(el.dataset.fw){var h=FLD.filter(function(v){return v.id===el.dataset.fw;})[0];
+    h.own=el.value;h.done=!!(h.val&&h.ev&&h.own&&h.cyc);save();renderToday();return;}
+  if(el.dataset.fc){var i=FLD.filter(function(v){return v.id===el.dataset.fc;})[0];
+    i.cyc=el.value;i.done=!!(i.val&&i.ev&&i.own&&i.cyc);
+    if(i.done&&i.cyc&&i.cyc!=="不变"){TODO.push({id:"t"+Date.now()+i.id,t:i.name,who:i.own,cyc:i.cyc,due:d(),ok:false});}
+    save();renderToday();return;}
+});
+document.addEventListener("change",function(e){
+  if((e.target.closest("[data-tgt]"))){
+    var b=e.target.closest("[data-tgt]"); TGTSEL=b.getAttribute("data-tgt");
+    document.getElementById("syncPathW").style.display=(TGTSEL==="obsidian")?"":"none";
+    renderTgt();return;}
+});
+
+/* 同步目标：由 环境状态.json 的探测结果决定显示，不可用也显示但标清楚缺什么 */
+var ENVT={t:null}, TGTSEL="";
+function renderTgt(){
+  var el=document.getElementById("tgtList");
+  var t=ENVT.t;
+  if(!t){
+    el.innerHTML='<div class="empty" style="grid-column:1/-1;padding:20px 14px">'+
+      '尚未导入环境状态。跟 Agent 说「探一下我的连接器」，'+
+      '它会把结果写进 <code>环境状态.json</code>，你导入后这里会显示每个目标能不能用。</div>';
+    return;
+  }
+  var keys=Object.keys(t.targets||{});
+  var on=keys.filter(function(k){return t.targets[k]["可用"]===true;});
+  var un=keys.filter(function(k){return t.targets[k]["可用"]!==true;});
+  var st=document.getElementById("connState");
+  var at=t["探测时间"]?("Agent 探测于 "+String(t["探测时间"]).slice(0,16)):"Agent 尚未探测";
+  if(!on.length){
+    st.innerHTML='<b>没有任何云端知识库工具可用。</b>后果是：成果只停在本机文件里，内容团队拿不到，'+
+      '知识库也不会自动更新。零依赖的替代路径是<b>导出 Markdown</b>——它永远可用；'+
+      '若你有 Obsidian，vault 本身就是文件夹，Agent 能直接读写，<b>不需要装任何连接器</b>。<br>'+
+      '<span style="opacity:.7">'+esc(at)+'</span>';
+  }else{
+    st.innerHTML='可用目标：<b>'+esc(on.map(function(k){return t.targets[k]["名称"];}).join("、"))+'</b>。'+
+      '其余不可用的目标已标出缺什么，可点开看获取方式。<br>'+
+      '<span style="opacity:.7">'+esc(at)+'</span>';
+  }
+  el.innerHTML=keys.map(function(k){
+    var v=t.targets[k], av=v["可用"];
+    var flag=av===true?'<span class="tgt-flag flag-ok">可用</span>'
+      :av===false?'<span class="tgt-flag flag-no">未连接</span>'
+      :'<span class="tgt-flag flag-un">未探测</span>';
+    var need=av===true?"":'<div class="tgt-need">缺：'+esc(v["需要什么"]||"")+
+      (v["如何获得"]?'<br>获取：'+esc(v["如何获得"]):"")+'</div>';
+    return '<button class="tgt'+(av===true?"":" off")+(TGTSEL===k?" on":"")+'" data-tgt="'+k+'">'+
+      '<div class="tgt-t">'+esc(v["名称"])+flag+'</div>'+
+      '<div class="tgt-s">'+esc(v["_可用说明"]||v["需要什么"]||"")+'</div>'+need+'</button>';
+  }).join("");
+}
+function doSync(){
+  if(!TGTSEL){toast("先选一个同步目标");return;}
+  var t=ENVT.t, v=t&&t.targets?t.targets[TGTSEL]:null;
+  if(v&&v["可用"]!==true){
+    toast("这个目标还没连上，先看卡片上写的缺什么");return;
+  }
+  if(TGTSEL==="obsidian"){
+    var p=document.getElementById("syncPath").value.trim();
+    if(!p){toast("Obsidian 需要填 vault 的绝对路径");return;}
+  }
+  var md=buildMd();
+  var n=FLD.filter(function(f){return f.done;}).length;
+  document.getElementById("syncOut").innerHTML=
+    '<div class="alert" style="margin-top:18px"><div class="ah">已生成</div><p>'+
+    esc(v?v["名称"]:TGTSEL)+' · '+n+' 条已入库事实。'+
+    '把这段交给 Agent，它会写到目标位置；Agent 也能直接读本目录的 事实.json 自行同步。<br>'+
+    '或者点下面的复制，自己放进去。</p></div>'+
+    '<div class="say" id="mdOut">'+esc(md)+'</div>'+
+    '<div class="btn-row"><button class="btn btn-sm" id="copyMd2">复制</button></div>';
+  addLog("生成同步内容",n+" 条事实",v?v["名称"]:TGTSEL);
+  save();renderLog();renderToday();
+}
+function buildMd(){
+  var out="# "+(S.brand||S.ent)+" · 企业事实库\n\n";
+  out+="> 由 geo-kb 工作台生成。AI 引用前请核对来源与更新时间。\n\n";
+  var rendered={};
+  INT.forEach(function(it){
+    out+="## "+it.t+"\n\n";
+    out+="- 客户在意："+it.c+"\n- 要做的判断："+it.j+"\n- AI 说错的后果："+it.bad+"\n\n";
+    var rows=FLD.filter(function(f){return (f.ints||[f.int]).indexOf(it.id)>=0;});
+    if(rows.length){
+      out+="| 事实 | 来源 | 责任人 | 更新周期 |\n|---|---|---|---|\n";
+      rows.forEach(function(f){
+        if(rendered[f.id]){
+          out+="| _同上（此条同时服务于其他意图）_ | | | |\n";
+          return;
+        }
+        rendered[f.id]=1;
+        out+="| "+f.val.replace(/\|/g,"\\|")+" | "+(f.src||"")+" / "+(f.ev||"")+" | "+(f.own||"")+" | "+(f.cyc||"")+" |\n";
+      });
+      out+="\n";
+    }
+  });
+  var pend=FLD.filter(function(f){return !f.done;});
+  if(pend.length){
+    out+="## 待补事实\n\n";
+    pend.forEach(function(f){out+="- **"+f.name+"** — "+f.why+"\n";});
+  }
+  return out;
+}
+function doCopy(b){
+  navigator.clipboard.writeText(document.getElementById("mdOut").innerText).then(function(){
+    b.innerText="已复制";setTimeout(function(){b.innerText="复制";},1600);});
+}
+function copyMd(){
+  var md=buildMd();
+  modal('<h3>企业事实库 Markdown</h3><div class="msub">'+FLD.filter(function(f){return f.done;}).length+' 条已入库</div>'+
+    '<div class="say" style="margin-top:0">'+esc(md)+'</div>'+
+    '<div class="btn-row"><button class="btn" id="mc">关闭</button></div>');
+}
+
+/* 初始化 */
+document.getElementById("entName").value=S.ent||"";
+document.getElementById("f0full").value=S.full||"";
+document.getElementById("f0brand").value=S.brand||"";
+document.getElementById("f0web").value=S.web||"";
+document.getElementById("f0biz").value=S.biz||"";
+document.getElementById("f0area").value=S.area||"";
+document.getElementById("f0goal").value=S.goal||"";
+document.getElementById("f0try").value=S.try||"";
+go("s0");paintThemeBtn();paintSyncHint();refreshAll();
+</script>
+</body>
+</html>
