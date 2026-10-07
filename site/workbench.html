@@ -198,24 +198,27 @@ td .d b{color:var(--tx2);font-weight:400}
 .sw input{width:15px;height:15px;accent-color:var(--ac);cursor:pointer}
 
 .fld{margin-bottom:17px}
-.fld .hint{font-size:12px;color:var(--tx3);line-height:1.7;margin-bottom:7px}
-.fld .hint.short{margin-bottom:5px}
-/* 长提示收进「为什么要填这个」，避免提示文字比输入框还高 */
-.why{font-family:var(--mono);font-size:10.5px;color:var(--tx3);background:none;border:none;
-  padding:0;cursor:pointer;margin-left:auto;text-decoration:underline dotted;
-  text-underline-offset:3px;flex:none}
-.why:hover{color:var(--ac)}
-.fld>label{display:flex;align-items:baseline;gap:6px;margin-bottom:5px;font-size:13.5px;font-weight:500}
-.whybox{font-size:12px;color:var(--tx2);line-height:1.75;background:var(--bg3);
-  border-left:2px solid var(--line2);border-radius:0 3px 3px 0;padding:9px 11px;margin-bottom:8px}
 .fld:last-child{margin-bottom:0}
+.fld>label{display:block;font-size:13.5px;font-weight:500;margin-bottom:5px}
+.fld .hint{font-size:12px;color:var(--tx3);line-height:1.7;margin-bottom:7px}
+/* 长提示用 details 折叠。summary 写完整第一句，用户点之前就知道会看到什么，
+   不用点一个含糊的「为什么要填这个」才知道值不值得点。 */
+.why{margin:-2px 0 8px}
+.why>summary{list-style:none;cursor:pointer;font-size:12px;color:var(--ac);
+  line-height:1.7;display:flex;align-items:flex-start;gap:6px;min-height:20px}
+.why>summary::-webkit-details-marker{display:none}
+.why>summary::after{content:"展开";font-family:var(--mono);font-size:10px;
+  color:var(--tx3);flex:none;margin-left:auto;padding-left:8px}
+.why[open]>summary::after{content:"收起"}
+.why>summary:hover{color:var(--ac-dim)}
+.whybox{font-size:12px;color:var(--tx2);line-height:1.8;background:var(--bg3);
+  border-left:2px solid var(--ac);border-radius:0 3px 3px 0;padding:10px 12px;margin-top:7px}
 .fld input,.fld textarea,.fld select{width:100%;padding:10px 12px;background:var(--bg2);
   border:1px solid var(--line2);border-radius:4px;line-height:1.6;transition:border-color .18s}
 .fld input:focus,.fld textarea:focus,.fld select:focus{border-color:var(--ac);outline:none}
 .fld textarea{resize:vertical;min-height:76px}
 .fld input::placeholder,.fld textarea::placeholder{color:var(--tx3)}
 .req{font-family:var(--mono);font-size:10.5px;color:var(--am);margin-left:6px;font-weight:400}
-.fld{margin-bottom:17px}
 /* 两列布局时，每个字段用 flex 列布局，输入框 margin-top:auto 压到底部。
    这样提示文字行数不同（左1行右2行）也不会让输入框错位。 */
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 18px;align-items:stretch}
@@ -689,7 +692,7 @@ function renderToday(){
 var PROF=[
   ["brand","品牌名",1,"客户平时怎么称呼你们","先填这个就够了。工商全称后面可以补"],
   ["full","工商全称",0,"营业执照上的名字","答不上也没关系——先用品牌名 + 地区检索，主体会标「未确认」，后面再补"],
-  ["web","官网",0,"官网地址","没有官网不是问题，但要意识到：官网是最权威的事实来源，缺了它 AI 只能引用第三方平台的说法，而那些错误它也会学"],
+  ["web","官网",0,"官网地址","没有官网不是问题，但要意识到：官网是最权威的事实来源，缺了它 AI 只能引用第三方平台，而那些错误它也会学"],
   ["biz","主要业务",1,"用你自己的话","别改成行业术语，AI 会照着复述"],
   ["area","覆盖地区",1,"主要在哪些城市或片区",""],
   ["goal","本次目标",1,"这次最想解决什么","一句话。客户问 AI 的时候把你说错了，还是压根不提你？"],
@@ -706,17 +709,25 @@ function renderProf(){
     var v=S[p[0]];
     // 提示文字长的收进「为什么要填这个」——避免提示比输入框还高
     var hint=p[4]||"";
-    var help=hint.length>22?
-      '<button class="why" type="button" data-why="'+esc(hint)+'">为什么要填这个</button>':"";
     var hintHtml="";
-    if(hint){
-      hintHtml=help
-        ?'<div class="hint short">'+esc(hint.slice(0,22))+'…</div>'+
-         '<div class="whybox" style="display:none">'+esc(hint)+'</div>'
-        :'<div class="hint">'+esc(hint)+'</div>';
+    if(hint.length>26){
+      // 长提示折叠。摘要要自成一句完整的话——按逗号或冒号切，
+      // 不能按句号切，否则「没有官网不是问题」会被截成半句。
+      var cut=-1,seps=["：","，","；"];
+      for(var i=0;i<seps.length;i++){
+        var k=hint.indexOf(seps[i]);
+        if(k>6&&k<=26){cut=k;break;}
+      }
+      var lead=cut>0?hint.slice(0,cut+1):hint.slice(0,26)+"…";
+      var rest=cut>0?hint.slice(cut+1).replace(/^\s+/,""):hint.slice(26);
+      if(rest&&!/[。？！：，；]$/.test(rest))rest+="…";
+      hintHtml='<details class="why"><summary>'+esc(lead)+'</summary>'+
+        '<div class="whybox">'+esc(rest)+'</div></details>';
+    }else if(hint){
+      hintHtml='<div class="hint">'+esc(hint)+'</div>';
     }
     return '<div class="fld"><label>'+esc(p[1])+(p[2]?'<span class="req">必填</span>':"")+
-      (help?help:"")+'</label>'+hintHtml+
+      '</label>'+hintHtml+
       '<input data-pf="'+p[0]+'" value="'+esc(v||"")+'" placeholder="'+esc(p[3])+'" aria-label="'+esc(p[1])+'"></div>';
   }).join("");
   var miss=PROF.filter(function(p){return p[2]&&!S[p[0]];});
@@ -1496,6 +1507,9 @@ var GOTO={build:"sec-build",ext:"sec-ext",fact:"sec-fact",todo:"sec-todo",
   log:"sec-log",sync:"sec-sync",today:"today",ask:"sec-ask"};
 document.addEventListener("click",function(e){
   var t;
+  // label 里的按钮点了会被 label 抢走焦点（聚焦同层输入框），这里先掐掉
+  var lb=e.target.closest("label button");
+  if(lb)e.preventDefault();
   if(e.target.closest("#burger")){
     var r=document.getElementById("rail"),on=r.className.indexOf("on")>=0;
     r.className=on?"rail":"rail on";
@@ -1515,11 +1529,6 @@ document.addEventListener("click",function(e){
     document.getElementById("mclose").onclick=closeM;return;}
   if(e.target.closest("#mclose")){closeM();return;}
 
-  if((t=e.target.closest("[data-why]"))){
-    var bx=t.parentNode.querySelector(".whybox");
-    if(bx){bx.style.display=(bx.style.display==="block")?"none":"block";
-      t.textContent=(bx.style.display==="block")?"收起说明":"为什么要填这个";}
-    return;}
   if(e.target.closest("#btnDeliver")){deliver();return;}
   if((t=e.target.closest("[data-ask]"))){askCmd(t.getAttribute("data-ask"));return;}
   if((t=e.target.closest("[data-goto]"))){
