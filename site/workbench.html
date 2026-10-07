@@ -566,11 +566,16 @@ h
 
 
 /* 首屏开始卡 */
-.start{text-align:left;padding:8px 0 4px}
+.start{text-align:left;padding:2px 0 4px}
 .start-t{font-size:19px;font-weight:600;color:var(--tx);margin-bottom:8px;line-height:1.4}
-.start-s{font-size:14px;color:var(--tx2);line-height:1.75;margin-bottom:18px;max-width:46em}
-.start-n{font-family:var(--mono);font-size:11.5px;color:var(--tx3);margin-top:16px;line-height:1.7}
+.start-s{font-size:14px;color:var(--tx2);line-height:1.75;margin-bottom:10px;max-width:46em}
+.start-n{font-family:var(--mono);font-size:11.5px;color:var(--tx3);margin-top:8px;line-height:1.7}
+.start-demo{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:16px;
+  padding-top:14px;border-top:1px dashed var(--line2)}
+.start-demo span{font-family:var(--mono);font-size:11.5px;color:var(--tx3)}
 .btn-lg{min-height:48px;padding:0 22px;font-size:15px}
+#guideCard{border-color:var(--line2)}
+#guideCard .card-b{padding-bottom:18px}
 @media(max-width:480px){
   .start-t{font-size:17px}
   .start-s{font-size:13.5px}
@@ -904,14 +909,19 @@ select:focus-visible,.opt:focus-visible{
 
 <!-- 0 企业档案 -->
 <section class="pg" id="s0">
-  <div class="card" id="startCard" style="display:none">
+  <div class="card" id="guideCard">
     <div class="card-b">
       <div class="start">
         <div class="start-t">先告诉我这家企业是谁</div>
-        <div class="start-s">六个问题，两分钟填完。填完就能联网搜「外面怎么说」，再逐条跟你核对。</div>
-        <button class="btn btn-p btn-lg" id="btnStart">开始填企业信息</button>
-        <button class="btn btn-sm" id="btnDemo">先看看示例</button>
+        <div class="start-s">下面六个问题，两分钟填完。填完就能联网搜「外面怎么说」，再逐条跟你核对。</div>
         <div class="start-n">不用一次填完，随时能改。填错了也没关系，这一步只是给后面的检索定位主体。</div>
+        <div class="start-demo">
+          <span>想先看看长什么样？</span>
+          <button class="btn btn-sm" id="btnDemo">载入示例数据</button>
+          <span id="demoClearWrap" style="display:none">
+            <button class="btn btn-sm btn-rd" id="btnDemoClear">清空示例</button>
+          </span>
+        </div>
       </div>
     </div>
   </div>
@@ -1551,14 +1561,23 @@ function paintThemeBtn2(){
   b.title=(t==="light"?"切到明亮模式":"切到暗黑模式");
 }
 
-/* 首屏：没数据时先给一个开始入口，不直接甩表单，也不自动塞示例 */
+/* 首屏：表单常驻可见。引导条只在「一个字段都还没填」时显示，填完自动收起。
+   绝不能把输入框藏起来——用户打开就要能直接开始填。 */
 var SESSION_DEMO_DONE=false;
 function paintStart(){
+  // 表单永远可见，绝不藏输入框。
+  // 引导条的三种状态：
+  //   空→ 引导 + 「载入示例」
+  //   已载入示例 → 引导 + 「清空示例」（必须留着，否则用户没法清）
+  //   填了自己的内容 → 收起
+  var isDemo=SESSION_DEMO_DONE&&!FROMFILE;
   var has=!!(S.full||S.brand);
-  var sc=document.getElementById("startCard"), fc=document.getElementById("formCard");
-  if(!sc||!fc)return;
-  if(has||SESSION_DEMO_DONE){sc.style.display="none";fc.style.display="";}
-  else{sc.style.display="";fc.style.display="none";}
+  var g=document.getElementById("guideCard"), fc=document.getElementById("formCard");
+  var dw=document.getElementById("demoClearWrap");
+  if(!fc)return;
+  fc.style.display="";
+  if(dw)dw.style.display=isDemo?"":"none";
+  if(g)g.style.display=(has&&!isDemo)?"none":"";
 }
 function go(p){
   Object.keys(PAGES).forEach(function(k){document.getElementById(k).style.display=(k===p)?"":"none";});
@@ -1646,8 +1665,13 @@ function toast(msg,ok){
 
 document.addEventListener("click",function(e){
   var t;
-  if(e.target.closest("#btnStart")){SESSION_DEMO_DONE=true;paintStart();fillForm();return;}
   if(e.target.closest("#btnDemo")){SESSION_DEMO_DONE=true;seed();fillForm();paintStart();toast("已载入示例，可随时清空",true);return;}
+  if(e.target.closest("#btnDemoClear")){
+    SESSION_DEMO_DONE=false;
+    S={ent:"",full:"",brand:"",web:"",biz:"",area:"",goal:"",try:""};
+    INT=[];EXT=[];FLD=[];TODO=[];LOG=[];CF=[];BLIND=[];FIRM=null;FROMFILE=false;
+    save();fillForm();refreshAll();go("s0");
+    toast("已清空，从空白开始");return;}
   if(e.target.closest("#burger")){
     var sd=document.getElementById("side");
     var isOpen=sd.className.indexOf("open")>=0;
