@@ -120,16 +120,16 @@ def write_agents_md(target: Path, base: Path, version: str) -> str:
 **数据位置**：`{base / 'data'}/`（每家企业一个子目录，JSON 文件）
 **安装版本**：{version} · {datetime.now(CST).strftime('%Y-%m-%d')}
 
-### 每次开工前先跑这个命令，不要凭记忆回答
+### 每次开工前先做这三件事
 
-用户提到「GEO」「知识库」「事实库」或某家企业名时，先执行：
-
-```bash
-python3 {base / 'scripts' / 'install.py'} --check --target {target}
-```
-
-它会返回有哪些企业、工作台在哪、哪些条目到期、有没有版本更新。
-**输出里的 `next_actions` 是必须执行的动作，不是建议。**
+1. **先读 inbox**：用户在工作台点「投递」会写 {base / 'inbox.json'}。
+   `待执行` 为 true 就直接执行里面的指令，不要问用户要做什么。执行完改回 false。
+2. **再跑状态检查**，不要凭记忆回答：
+   ```bash
+   python3 {base / 'scripts' / 'install.py'} --check --target {target}
+   ```
+   输出里的 `next_actions` 是必须执行的动作，不是建议。
+3. 提到某家企业时，读 `{base / 'data'}/<企业>/` 下的 JSON。
 
 ### 新建一家企业
 
@@ -209,6 +209,20 @@ def install(target: Path) -> int:
     env_src = base / "环境状态.json"
     if not env_src.exists():
         shutil.copy2(ROOT / "templates" / "json" / "环境状态.json", env_src)
+
+    # inbox：页面投递指令的落点。Agent 每次会话先读它。
+    inbox_src = base / "inbox.json"
+    if not inbox_src.exists():
+        inbox_src.write_text(
+            "{\n"
+            "  \"_说明\": \"工作台投递的指令会覆盖这个文件。读到 待执行=true 就执行。\",\n"
+            "  \"_schema\": 1,\n"
+            "  \"待执行\": false,\n"
+            "  \"企业\": null,\n"
+            "  \"投递时间\": null,\n"
+            "  \"指令\": []\n"
+            "}\n",
+            encoding="utf-8")
 
     info = {
         "installed_at": datetime.now(CST).isoformat(timespec="seconds"),

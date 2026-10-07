@@ -151,6 +151,14 @@ td .d b{color:var(--tx2);font-weight:400}
 .note-t{font-weight:500;color:var(--tx);margin-bottom:3px}
 
 /* 交给 Agent 的动作列表 */
+.deliver{display:flex;align-items:center;gap:14px;padding:15px 16px;margin-bottom:16px;
+  border:1px solid var(--ac);background:var(--ac-bg);border-radius:5px;flex-wrap:wrap;row-gap:11px}
+.deliver-l{flex:1;min-width:220px}
+.deliver-l b{font-size:15px;font-weight:600;display:block;margin-bottom:4px;line-height:1.5}
+.deliver-l div{font-size:12.5px;color:var(--tx2);line-height:1.7}
+.deliver-l code{background:var(--bg2);padding:1px 5px;border-radius:2px;color:var(--ac)}
+.ask-hint{font-size:12.5px;color:var(--tx3);line-height:1.7;margin-top:12px;
+  padding-top:12px;border-top:1px dashed var(--line2)}
 .asks{display:flex;flex-direction:column;gap:0}
 .ask{display:flex;align-items:center;gap:14px;padding:13px 0;border-bottom:1px solid var(--line);
   flex-wrap:wrap;row-gap:9px}
@@ -938,6 +946,113 @@ function renderTgt(){
   }).join("");
 }
 
+/* ══════════════════════════════════════════════════════════
+   WorkBuddy 专用：页面 → Agent 的投递链路
+   页面不能直接发消息给 Agent（浏览器沙箱无此能力），
+   但能写文件，而 Agent 一直在读这个目录。
+   所以：点按钮 → 写入 inbox.json → Agent 下次读文件就知道要做什么。
+   用户不需要复制粘贴，不需要组织语言，不需要盯着对话框。
+   ══════════════════════════════════════════════════════════ */
+var WB={
+  enabled:1,
+  inboxPath:"geo-kb/inbox.json",   // Agent 会持续读这个文件
+  tip:"投递后 Agent 会自动读取并执行"
+};
+
+function inboxData(){
+  var s=stat();
+  var actions=askList().filter(function(x){return x.btn;});
+  return {
+    _说明:"页面投递的指令。Agent 每次会话开始先读这个文件，读到就执行。执行完把进度写进 进度.json。",
+    _schema:1,
+    待执行:true,
+    企业:S.brand||S.ent||null,
+    投递时间:new Date().toISOString(),
+    触发动作:actions.map(function(x){return {动作:x.id,说明:x.t};}),
+    指令:actions.map(function(x){
+      var m=askText(x.id);
+      return {动作:x.id,标题:m.t,内容:m.b};}),
+    提醒:"读到本文件后请：1) 先写 进度.json 记录你开始做 2) 每完成一步回写进度 3) 结果写进对应 JSON"
+  };
+}
+
+function askText(id){
+  var who=S.brand||S.full||S.ent||"这家企业";
+  var map={
+    search:{t:"联网检索「"+who+"」的外部说法",
+      b:"按 SKILL.md 第 1 步做。品牌名："+who+
+        (S.web?"，官网："+S.web:"（客户没给官网，先用品牌名 + 地区检索，主体标「未确认」）")+
+        (S.area?"，主要地区："+S.area:"")+
+        "\n\n要求：\n"+
+        "1. 八类目标逐类检索：官网、媒体报道、地图点评、第三方场馆生活平台、行业榜单、电商平台、竞品信息、客户盲区\n"+
+        "2. 每条原文照抄，带来源名称、分级（A官方/A媒体/B行业数据/C自媒体）、日期、链接\n"+
+        "3. 每完成一类就回写 进度.json，不要攒到最后\n"+
+        "4. 收尾做交叉比对：价格 / 成立时间 / 服务范围 / 联系方式 / 资质五项，差异转成具体问法\n"+
+        "5. 没检索到的类型写「本轮未检索到」，不要默默跳过\n"+
+        "6. 结果写进 外部说法.json"},
+    intent:{t:"推导「"+who+"」的客户购买意图",
+      b:"按 SKILL.md 第 3 步做。\n\n要求：\n"+
+        "1. 从客户真实业务推，不是套通用模板\n"+
+        "2. 3-6 条，每条含：客户在意什么 / 要做的判断 / AI 说错的具体后果 / 谁参与判断\n"+
+        "3. 按行业筛过——ToC 本地生活不要推「企业文化与团队故事」这类\n"+
+        "4.「AI 说错的后果」要具体到「客户会产生什么损失」，不写「影响品牌形象」\n"+
+        "5. 过程回写 进度.json\n\n结果写进 意图.json，等客户确认后再推字段。"},
+    clarify:{t:"处理「"+who+"」的冲突与盲区",
+      b:"读 外部说法.json 的 交叉比对结果 与 客户盲区。\n\n要求：\n"+
+        "1. 每条冲突给出「一句能覆盖所有情况的表述」，不是「数据不一致」\n"+
+        "2. 冲突常来自真实的门店/子品牌差异——先确认差异是否真实存在\n"+
+        "3. 盲区逐条列出：客户可能没意识到但 AI 已经学到的东西\n"+
+        "4. 每条给客户两个选项：要不要进库、要不要被 AI 主动提\n"+
+        "5. 客户确认前不要写入事实库"},
+    field:{t:"按已确认的意图推导「"+who+"」的必填字段",
+      b:"读 意图.json（客户已确认的）。\n\n要求：\n"+
+        "1. 每条意图推 2-5 条事实，能少推就少推，只推客户真会用的\n"+
+        "2. 每条含：字段名 / 为什么需要（AI 说错的后果）/ 具体要求 / 谁能提供这条\n"+
+        "3. 必须包含减法字段：「明确不提供什么」「什么情况不用买」\n"+
+        "4. 价格类必须写口径：按什么单位、含什么、不含什么\n"+
+        "5. 给更新周期建议——本地生活价格类按周，其余按月或按季\n"+
+        "6. 结果写进 事实.json，四格留空待客户填"},
+    sync:{t:"把「"+who+"」的事实库同步出去",
+      b:"读 事实.json 与 环境状态.json。\n\n要求：\n"+
+        "1. 按 环境状态.json 里可用为 true 的目标逐个同步\n"+
+        "2. 同步前说清要写哪些条目、写到哪\n"+
+        "3. 全不可用时明确告诉用户缺什么、怎么获得，并给零依赖替代路径（导出 Markdown）\n"+
+        "4. 同步完更新 事实.json 的 上次同步时间"}
+  };
+  return map[id]||{t:"未知动作",b:""};
+}
+
+/* 一键投递：下载 inbox.json，Agent 会读到 */
+function deliver(){
+  var s=stat();
+  if(!s.has){toast("先填企业信息，Agent 不知道搜什么");return;}
+  var actions=askList().filter(function(x){return x.btn;});
+  if(!actions.length){toast("当前没有要执行的动作");return;}
+  var data=inboxData();
+  var b=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  var a=document.createElement("a");
+  a.href=URL.createObjectURL(b);
+  a.download="inbox.json";
+  a.click();
+  setTimeout(function(){URL.revokeObjectURL(a.href);},1500);
+  TASKS.unshift({id:"deliver",t:"投递 "+actions.length+" 个动作给 Agent",at:new Date().toLocaleString("zh-CN"),text:""});
+  addLog("投递指令",actions.length+" 个动作","inbox.json 已下载");
+  save();refreshAll();
+  modal('<h3>已投递 '+actions.length+' 个动作</h3>'+
+    '<div class="msub">'+esc(S.brand||S.ent)+'</div>'+
+    '<div class="note good"><div class="note-t">你什么都不用做</div>'+
+    'inbox.json 已下载。请把它放到项目的 <code>'+esc(WB.inboxPath)+'</code> 位置，'+
+    'Agent 下次读文件就会自动执行。<br>已经下载过了就不用再下。</div>'+
+    '<div class="say">'+esc(actions.map(function(x){return "· "+x.t;}).join("\n"))+'</div>'+
+    '<div class="btn-row" style="margin-top:14px">'+
+    '<button class="btn btn-p btn-sm" id="copyInbox">复制 inbox 内容</button>'+
+    '<button class="btn btn-sm" id="mclose">知道了</button></div>');
+  document.getElementById("copyInbox").onclick=function(){
+    navigator.clipboard.writeText(JSON.stringify(data,null,2)).then(function(){
+      toast("已复制，存成 inbox.json 即可",true);});};
+  document.getElementById("mclose").onclick=closeM;
+}
+
 /* 交给 Agent：能按钮化的都按钮化，不用用户组织语言 */
 function askList(){
   var s=stat(),L=[];
@@ -982,80 +1097,48 @@ function renderAsk(){
   var el=document.getElementById("askBody");
   var L=askList(),s=stat();
   var bg=document.getElementById("askBdg");
-  var pending=L.filter(function(x){return x.btn;}).length;
-  bg.textContent=pending?pending+" 项可执行":"—";
-  bg.className="bdg "+(pending?"b-info":"b-idle");
-  el.innerHTML='<div class="asks">'+L.map(function(x){
-    var right=x.btn?
-      '<div class="ask-a"><button class="btn '+(x.tone==="primary"?"btn-p":"")+
-      '" data-ask="'+x.id+'">'+esc(x.btn)+'</button></div>':"";
-    return '<div class="ask'+(x.todo?" todo":"")+'">'+
-      '<div class="ask-l"><div class="ask-t">'+esc(x.t)+'</div>'+
-      (x.d?'<div class="ask-d">'+esc(x.d)+'</div>':"")+'</div>'+right+'</div>';
-  }).join("")+'</div>'+
-  (pending?'<div class="note" style="margin:14px 0 0">点按钮 → 指令和参数都生成好了 → 复制 → 粘给 Agent。'+
-    'Agent 做完后把结果文件导入回来，页面会自动显示。</div>':"");
+  var acts=L.filter(function(x){return x.btn;});
+  bg.textContent=acts.length?acts.length+" 项可执行":"—";
+  bg.className="bdg "+(acts.length?"b-info":"b-idle");
+
+  var head="";
+  if(!s.has){
+    head='<div class="note"><div class="note-t">先填企业信息</div>'+
+      'Agent 不知道要搜什么。填完下面就能一键投递。</div>';
+  }else if(!acts.length){
+    head='<div class="note good">当前没有要交给 Agent 的事。库里 '+
+      s.fDone+' 条事实已入库，按各自周期维护即可。</div>';
+  }else{
+    head='<div class="deliver">'+
+      '<div class="deliver-l"><b>一键投递 '+acts.length+' 个动作给 Agent</b>'+
+      '<div>投放到 <code>'+esc(WB.inboxPath)+'</code>，Agent 下次读文件自动执行。'+
+      '你不需要切到对话框，也不需要组织语言。</div></div>'+
+      '<button class="btn btn-p btn-lg" id="btnDeliver">投递</button>'+
+      '</div>';
+  }
+
+  el.innerHTML=head+
+    '<div class="asks">'+(L.filter(function(x){return x.btn;}).length?
+      L.map(function(x){
+        var right=x.btn?
+          '<div class="ask-a"><button class="btn '+(x.tone==="primary"?"btn-p":"")+
+          '" data-ask="'+x.id+'">'+esc(x.btn)+'</button></div>':"";
+        return '<div class="ask'+(x.todo?" todo":"")+'">'+
+          '<div class="ask-l"><div class="ask-t">'+esc(x.t)+'</div>'+
+          (x.d?'<div class="ask-d">'+esc(x.d)+'</div>':"")+'</div>'+right+'</div>';
+      }).join("") :
+      '<div class="empty" style="padding:16px">没有待执行的动作</div>')+'</div>'+
+    (acts.length?'<div class="ask-hint">单独执行某一项 → 点右侧按钮。'+
+      '不确定该做哪步 → 看上面「今天要处理的」。</div>':"");
 }
 function askCmd(id){
-  var s=stat(),who=S.brand||S.full||S.ent;
-  var map={
-    search:{
-      t:"联网检索「"+who+"」的外部说法",
-      b:"按 SKILL.md 第 1 步做。品牌名："+(who||"未填")+
-         (S.web?"，官网："+S.web:"（客户没给官网，先用品牌名 + 地区检索，主体标「未确认」）")+
-         (S.area?"，主要地区："+S.area:"")+
-         "\n\n要求：\n"+
-         "1. 八类目标逐类检索：官网、媒体报道、地图点评、第三方场馆生活平台、行业榜单、电商平台、竞品信息、客户盲区\n"+
-         "2. 每条原文照抄，带来源名称、分级（A官方/A媒体/B行业数据/C自媒体）、日期、链接\n"+
-         "3. 检索过程中每完成一类就回写 进度.json（格式见文件里的 _写入说明）\n"+
-         "4. 收尾做交叉比对：价格 / 成立时间 / 服务范围 / 联系方式 / 资质五项，跨来源有差异的转成具体问法\n"+
-         "5. 没检索到的类型写「本轮未检索到」，不要默默跳过\n"+
-         "6. 结果写进 外部说法.json\n\n参数已存在档案.json，直接读。",
-    },
-    intent:{
-      t:"推导「"+who+"」的客户购买意图",
-      b:"按 SKILL.md 第 3 步做。\n\n要求：\n"+
-        "1. 从客户的真实业务推，不是套通用模板\n"+
-        "2. 3-6 条，每条含：客户在意什么 / 要做的判断 / AI 说错的具体后果 / 谁参与判断\n"+
-        "3. 按行业筛过——ToC 本地生活不要推「企业文化与团队故事」这类\n"+
-        "4. 「AI 说错的后果」要具体到「客户会产生什么损失」，不写「影响品牌形象」\n"+
-        "5. 推导过程中回写 进度.json\n\n结果写进 意图.json，等客户确认后再推字段。",
-    },
-    clarify:{
-      t:"处理「"+who+"」的冲突与盲区",
-      b:"读 外部说法.json 里的 交叉比对结果 与 客户盲区。\n\n要求：\n"+
-        "1. 每条冲突给出「一句能覆盖所有情况的表述」，而不是「数据不一致」\n"+
-        "2. 冲突往往来自真实的门店/子品牌差异——先确认是不是真的存在差异\n"+
-        "3. 盲区逐条列出：客户可能完全没意识到，但 AI 已经学到的东西\n"+
-        "4. 每条盲区给客户两个选项：要不要进库、要不要被 AI 主动提\n"+
-        "5. 客户确认前不要写入事实库",
-    },
-    field:{
-      t:"按已确认的意图推导「"+who+"」的必填字段",
-      b:"读 意图.json（客户已确认的）。\n\n要求：\n"+
-        "1. 每条意图推出 2-5 条事实，能少推就少推，只推客户真正会用的\n"+
-        "2. 每条含：字段名 / 为什么需要（AI 说错的后果）/ 具体要求 / 谁能提供这条\n"+
-        "3. 必须包含减法字段：「明确不提供什么」「什么情况不用买」\n"+
-        "4. 价格类必须写口径：按什么单位、含什么、不含什么\n"+
-        "5. 每条给更新周期建议——本地生活价格类按周，其余按月或按季\n"+
-        "6. 结果写进 事实.json，四格（内容/证据/责任人/周期）留空待客户填",
-    },
-    sync:{
-      t:"把「"+who+"」的事实库同步出去",
-      b:"读 事实.json 与 环境状态.json。\n\n要求：\n"+
-        "1. 按 环境状态.json 里可用为 true 的目标逐个同步\n"+
-        "2. 同步前把要写哪些条目、写到哪说清楚\n"+
-        "3. 全部不可用时明确告诉用户缺什么、怎么获得，并给零依赖替代路径（导出 Markdown）\n"+
-        "4. 同步完更新 事实.json 的 上次同步时间",
-    }
-  };
-  var m=map[id];
-  if(!m){toast("这个动作暂时没有对应指令");return;}
-  var text=m.t+"\n\n"+m.b;
+  var m=askText(id);
+  if(!m||m.t==="未知动作"){toast("这个动作暂时没有对应指令");return;}
+  var text=m.t+"\n\n"+m.b+"\n\n参数已存在档案.json，直接读。";
   TASKS.unshift({id:id,t:m.t,at:new Date().toLocaleString("zh-CN"),text:text});
   addLog("生成指令",m.t.slice(0,24),"");
   save();refreshAll();
-  modal('<h3>'+esc(m.t)+'</h3><div class="msub">复制这段发给 Agent</div>'+
+  modal('<h3>'+esc(m.t)+'</h3><div class="msub">单独执行这一个动作</div>'+
     '<div class="say">'+esc(text)+'</div>'+
     '<div class="btn-row" style="margin-top:14px">'+
     '<button class="btn btn-p btn-sm" id="cpAsk">复制指令</button>'+
@@ -1387,6 +1470,7 @@ document.addEventListener("click",function(e){
     document.getElementById("mclose").onclick=closeM;return;}
   if(e.target.closest("#mclose")){closeM();return;}
 
+  if(e.target.closest("#btnDeliver")){deliver();return;}
   if((t=e.target.closest("[data-ask]"))){askCmd(t.getAttribute("data-ask"));return;}
   if((t=e.target.closest("[data-goto]"))){
     var id=GOTO[t.getAttribute("data-goto")];
