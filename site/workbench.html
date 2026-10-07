@@ -150,6 +150,33 @@ td .d b{color:var(--tx2);font-weight:400}
 .note.good{border-left-color:var(--ac);background:var(--ac-bg)}
 .note-t{font-weight:500;color:var(--tx);margin-bottom:3px}
 
+/* 交给 Agent 的动作列表 */
+.asks{display:flex;flex-direction:column;gap:0}
+.ask{display:flex;align-items:center;gap:14px;padding:13px 0;border-bottom:1px solid var(--line);
+  flex-wrap:wrap;row-gap:9px}
+.ask:last-child{border-bottom:none}
+.ask-l{flex:1;min-width:200px}
+.ask-t{font-size:14.5px;font-weight:500;line-height:1.5}
+.ask-d{font-size:12.5px;color:var(--tx3);line-height:1.7;margin-top:3px}
+.ask-a{flex:none}
+.ask.todo .ask-t{color:var(--tx2)}
+
+/* 执行进度步骤条 */
+.steps{position:relative;padding-left:2px}
+.step{display:flex;gap:13px;padding:0 0 18px;position:relative}
+.step:last-child{padding-bottom:0}
+.step::before{content:"";position:absolute;left:11px;top:24px;bottom:0;width:1px;background:var(--line)}
+.step:last-child::before{display:none}
+.step-n{width:24px;height:24px;border-radius:50%;border:1px solid var(--line2);background:var(--bg);
+  display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;
+  color:var(--tx3);flex:none;z-index:1}
+.step-b{flex:1;min-width:0;padding-top:2px}
+.step-t{font-size:14px;font-weight:500;line-height:1.5}
+.step-d{font-size:12.5px;color:var(--tx3);line-height:1.7;margin-top:3px}
+.step-r{font-size:13px;color:var(--tx2);line-height:1.75;margin-top:6px;padding:9px 11px;
+  background:var(--bg3);border-radius:4px;border-left:2px solid var(--ac)}
+.step-x{font-family:var(--mono);font-size:11px;color:var(--tx3);margin-top:5px}
+
 .fold{border:1px solid var(--line2);border-radius:5px;background:var(--bg);overflow:hidden}
 .fold>summary{list-style:none;cursor:pointer;padding:12px 15px;font-size:13.5px;
   display:flex;align-items:center;gap:9px}
@@ -342,6 +369,7 @@ td .d b{color:var(--tx2);font-weight:400}
     <div class="rail-g">
       <div class="rail-l">今天</div>
       <a href="#today" data-g="today">待处理<span class="n" id="navToday">0</span></a>
+      <a href="#sec-ask" data-g="ask">交给 Agent<span class="n" id="navAsk">0</span></a>
       <a href="#sec-build" data-g="build">建库<span class="n" id="navBuild">0/3</span></a>
     </div>
     <div class="rail-g">
@@ -366,6 +394,32 @@ td .d b{color:var(--tx2);font-weight:400}
     </div>
     <div class="today-sub" id="todaySub"></div>
     <div class="tasks" id="taskList"></div>
+  </section>
+
+  <section class="sec" id="sec-ask">
+    <div class="sec-h">
+      <h2>交给 Agent 做</h2>
+      <span class="meta">点按钮 · 复制 · 粘给 Agent</span>
+    </div>
+    <div class="sec-d">检索、推导字段、同步这些只有 Agent 能做（页面在浏览器沙箱里，没有联网能力）。
+      但<b>你不用组织语言</b>——点一下，指令和参数都生成好了，只剩复制粘贴一步。</div>
+
+    <div class="panel">
+      <div class="panel-h">
+        <h3>下一步做什么</h3>
+        <span class="bdg b-idle" id="askBdg">—</span>
+      </div>
+      <div class="panel-b" id="askBody"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-h">
+        <h3>执行进度</h3>
+        <span class="bdg b-idle" id="progBdg">尚未开始</span>
+        <span class="hint">Agent 每做一步就回写 进度.json，重新导入即可看到</span>
+      </div>
+      <div class="panel-b" id="progBody"></div>
+    </div>
   </section>
 
   <section class="sec" id="sec-build">
@@ -473,6 +527,7 @@ var DRAFT="geokb_draft_v2", THEME="geokb_theme";
 var ENVT={t:null}, TGTSEL="", FIRM=null, FROMFILE=false;
 var S={ent:"",full:"",brand:"",web:"",biz:"",area:"",goal:"",try:""};
 var INT=[],EXT=[],CF=[],BLIND=[],FLD=[],TODO=[],LOG=[],SEED_DONE=false;
+var TASKS=[], PROG=[];
 
 /* 主题：首屏渲染前应用，避免闪 */
 (function(){
@@ -516,7 +571,7 @@ function closeM(){document.getElementById("mask").className="mask";}
 function save(){
   try{localStorage.setItem(DRAFT,JSON.stringify({
     S:S,INT:INT,EXT:EXT,CF:CF,BLIND:BLIND,FLD:FLD,TODO:TODO,LOG:LOG,
-    FIRM:FIRM,FROMFILE:FROMFILE,ENVT:ENVT}));}catch(e){}
+    FIRM:FIRM,FROMFILE:FROMFILE,ENVT:ENVT,TASKS:TASKS,PROG:PROG}));}catch(e){}
 }
 function load(){
   try{
@@ -524,7 +579,8 @@ function load(){
     if(r){var d=JSON.parse(r);
       S=d.S||S;INT=d.INT||[];EXT=d.EXT||[];CF=d.CF||[];BLIND=d.BLIND||[];
       FLD=d.FLD||[];TODO=d.TODO||[];LOG=d.LOG||[];
-      FIRM=d.FIRM||null;FROMFILE=!!d.FROMFILE;ENVT=d.ENVT||{t:null};}
+      FIRM=d.FIRM||null;FROMFILE=!!d.FROMFILE;ENVT=d.ENVT||{t:null};
+      TASKS=d.TASKS||[];PROG=d.PROG||[];}
   }catch(e){}
 }
 function addLog(t,y,p){LOG.unshift({d:today(),t:t,x:"",y:y||"",p:p||""});}
@@ -591,6 +647,8 @@ function renderToday(){
   else if(!EXT.length&&s.has)bd++;
   if(s.intAll&&s.intOk===s.intAll)bd++;
   document.getElementById("navBuild").textContent=bd+"/3";
+  var ab=document.getElementById("navAsk");
+  if(ab)ab.textContent=askList().filter(function(x){return x.btn;}).length;
 }
 
 /* 企业档案 */
@@ -880,9 +938,177 @@ function renderTgt(){
   }).join("");
 }
 
-/* 统一刷新入口：所有渲染函数由它调度，彼此不互调 */
+/* 交给 Agent：能按钮化的都按钮化，不用用户组织语言 */
+function askList(){
+  var s=stat(),L=[];
+  if(!s.has){
+    L.push({id:"fill",t:"先填企业信息",d:"填完才知道搜什么",
+      done:false,todo:1});
+  }
+  if(s.has&&(!EXT.length||s.extWait)){
+    L.push({id:"search",t:s.extWait?("继续核对剩下的 "+(EXT.length-s.extWait)+" 条外部说法"):"联网搜「外面怎么说」",
+      d:s.extWait?"Agent 搜到的东西只是外部说法，认了才算事实":"官网 · 本地生活 · 榜单 · 竞品 · 媒体，逐条带来源",
+      btn:"生成检索指令",tone:"primary"});
+  }
+  if(s.cfOpen||s.blOpen){
+    L.push({id:"clarify",t:"澄清冲突与盲区",
+      d:s.cfOpen?(s.cfOpen+" 处冲突需要一句能覆盖所有情况的表述"):"",
+      btn:s.blOpen?("处理 "+s.blOpen+" 条盲区"):"",tone:""});
+  }
+  if(!s.intAll&&s.has){
+    L.push({id:"intent",t:"推导客户购买意图",
+      d:"客户在意什么 → 要做的判断 → AI 说错的后果。从企业信息推，不是套模板",
+      btn:"生成推导指令",tone:"primary"});
+  }
+  if(s.intAll&&s.intOk<s.intAll){
+    L.push({id:"intentOk",t:"确认剩余 "+(s.intAll-s.intOk)+" 条意图",
+      d:"确认完才能推字段",btn:"",tone:""});
+  }
+  if(s.intAll&&s.intOk===s.intAll&&(!s.fAll||s.fDone<s.fAll)){
+    L.push({id:"field",t:"按已确认的意图推导必填字段",
+      d:"每条意图推出 2-5 条要填的事实，附「为什么需要」",
+      btn:s.fAll?("补齐剩下 "+(s.fAll-s.fDone)+" 条"):"生成推导指令",tone:"primary"});
+  }
+  if(s.fDone){
+    L.push({id:"sync",t:"同步到你的知识库工具",
+      d:"库里躺着没人用等于没做",
+      btn:"生成同步指令",tone:""});
+  }
+  if(!L.length)L.push({id:"none",t:"当前没有要交给 Agent 的事",
+    d:"库里 "+s.fDone+" 条事实已入库，按各自周期维护即可",btn:"",tone:""});
+  return L;
+}
+function renderAsk(){
+  var el=document.getElementById("askBody");
+  var L=askList(),s=stat();
+  var bg=document.getElementById("askBdg");
+  var pending=L.filter(function(x){return x.btn;}).length;
+  bg.textContent=pending?pending+" 项可执行":"—";
+  bg.className="bdg "+(pending?"b-info":"b-idle");
+  el.innerHTML='<div class="asks">'+L.map(function(x){
+    var right=x.btn?
+      '<div class="ask-a"><button class="btn '+(x.tone==="primary"?"btn-p":"")+
+      '" data-ask="'+x.id+'">'+esc(x.btn)+'</button></div>':"";
+    return '<div class="ask'+(x.todo?" todo":"")+'">'+
+      '<div class="ask-l"><div class="ask-t">'+esc(x.t)+'</div>'+
+      (x.d?'<div class="ask-d">'+esc(x.d)+'</div>':"")+'</div>'+right+'</div>';
+  }).join("")+'</div>'+
+  (pending?'<div class="note" style="margin:14px 0 0">点按钮 → 指令和参数都生成好了 → 复制 → 粘给 Agent。'+
+    'Agent 做完后把结果文件导入回来，页面会自动显示。</div>':"");
+}
+function askCmd(id){
+  var s=stat(),who=S.brand||S.full||S.ent;
+  var map={
+    search:{
+      t:"联网检索「"+who+"」的外部说法",
+      b:"按 SKILL.md 第 1 步做。品牌名："+(who||"未填")+
+         (S.web?"，官网："+S.web:"（客户没给官网，先用品牌名 + 地区检索，主体标「未确认」）")+
+         (S.area?"，主要地区："+S.area:"")+
+         "\n\n要求：\n"+
+         "1. 八类目标逐类检索：官网、媒体报道、地图点评、第三方场馆生活平台、行业榜单、电商平台、竞品信息、客户盲区\n"+
+         "2. 每条原文照抄，带来源名称、分级（A官方/A媒体/B行业数据/C自媒体）、日期、链接\n"+
+         "3. 检索过程中每完成一类就回写 进度.json（格式见文件里的 _写入说明）\n"+
+         "4. 收尾做交叉比对：价格 / 成立时间 / 服务范围 / 联系方式 / 资质五项，跨来源有差异的转成具体问法\n"+
+         "5. 没检索到的类型写「本轮未检索到」，不要默默跳过\n"+
+         "6. 结果写进 外部说法.json\n\n参数已存在档案.json，直接读。",
+    },
+    intent:{
+      t:"推导「"+who+"」的客户购买意图",
+      b:"按 SKILL.md 第 3 步做。\n\n要求：\n"+
+        "1. 从客户的真实业务推，不是套通用模板\n"+
+        "2. 3-6 条，每条含：客户在意什么 / 要做的判断 / AI 说错的具体后果 / 谁参与判断\n"+
+        "3. 按行业筛过——ToC 本地生活不要推「企业文化与团队故事」这类\n"+
+        "4. 「AI 说错的后果」要具体到「客户会产生什么损失」，不写「影响品牌形象」\n"+
+        "5. 推导过程中回写 进度.json\n\n结果写进 意图.json，等客户确认后再推字段。",
+    },
+    clarify:{
+      t:"处理「"+who+"」的冲突与盲区",
+      b:"读 外部说法.json 里的 交叉比对结果 与 客户盲区。\n\n要求：\n"+
+        "1. 每条冲突给出「一句能覆盖所有情况的表述」，而不是「数据不一致」\n"+
+        "2. 冲突往往来自真实的门店/子品牌差异——先确认是不是真的存在差异\n"+
+        "3. 盲区逐条列出：客户可能完全没意识到，但 AI 已经学到的东西\n"+
+        "4. 每条盲区给客户两个选项：要不要进库、要不要被 AI 主动提\n"+
+        "5. 客户确认前不要写入事实库",
+    },
+    field:{
+      t:"按已确认的意图推导「"+who+"」的必填字段",
+      b:"读 意图.json（客户已确认的）。\n\n要求：\n"+
+        "1. 每条意图推出 2-5 条事实，能少推就少推，只推客户真正会用的\n"+
+        "2. 每条含：字段名 / 为什么需要（AI 说错的后果）/ 具体要求 / 谁能提供这条\n"+
+        "3. 必须包含减法字段：「明确不提供什么」「什么情况不用买」\n"+
+        "4. 价格类必须写口径：按什么单位、含什么、不含什么\n"+
+        "5. 每条给更新周期建议——本地生活价格类按周，其余按月或按季\n"+
+        "6. 结果写进 事实.json，四格（内容/证据/责任人/周期）留空待客户填",
+    },
+    sync:{
+      t:"把「"+who+"」的事实库同步出去",
+      b:"读 事实.json 与 环境状态.json。\n\n要求：\n"+
+        "1. 按 环境状态.json 里可用为 true 的目标逐个同步\n"+
+        "2. 同步前把要写哪些条目、写到哪说清楚\n"+
+        "3. 全部不可用时明确告诉用户缺什么、怎么获得，并给零依赖替代路径（导出 Markdown）\n"+
+        "4. 同步完更新 事实.json 的 上次同步时间",
+    }
+  };
+  var m=map[id];
+  if(!m){toast("这个动作暂时没有对应指令");return;}
+  var text=m.t+"\n\n"+m.b;
+  TASKS.unshift({id:id,t:m.t,at:new Date().toLocaleString("zh-CN"),text:text});
+  addLog("生成指令",m.t.slice(0,24),"");
+  save();refreshAll();
+  modal('<h3>'+esc(m.t)+'</h3><div class="msub">复制这段发给 Agent</div>'+
+    '<div class="say">'+esc(text)+'</div>'+
+    '<div class="btn-row" style="margin-top:14px">'+
+    '<button class="btn btn-p btn-sm" id="cpAsk">复制指令</button>'+
+    '<button class="btn btn-sm" id="dlAsk">下载 任务清单.json</button>'+
+    '<button class="btn btn-sm" id="mclose">关闭</button></div>');
+  document.getElementById("cpAsk").onclick=function(){
+    navigator.clipboard.writeText(text).then(function(){toast("已复制，粘给 Agent",true);},
+      function(){toast("复制失败，手动选中吧");});};
+  document.getElementById("dlAsk").onclick=function(){
+    var payload={_说明:"交给 Agent 的执行清单。Agent 做完后把结果写进对应 JSON，并回写 进度.json。",
+      企业:(S.brand||S.ent||""),生成时间:new Date().toISOString(),
+      任务:TASKS.map(function(t){return {动作:t.id,说明:t.t,指令:t.text};})};
+    var b=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+    var a=document.createElement("a");
+    a.href=URL.createObjectURL(b);a.download=(S.brand||"企业")+"_任务清单.json";
+    a.click();URL.revokeObjectURL(a.href);
+    toast("已下载，导入给 Agent 也行",true);};
+  document.getElementById("mclose").onclick=closeM;
+}
+
+/* 执行进度：Agent 回写 进度.json，页面导入后显示每一步 */
+function renderProg(){
+  var el=document.getElementById("progBody");
+  var bg=document.getElementById("progBdg");
+  if(!PROG.length){
+    bg.textContent="尚未开始";bg.className="bdg b-idle";
+    el.innerHTML='<div class="empty"><b>还没有执行记录</b>'+
+      '点上面任意按钮生成指令，Agent 执行时会实时回写每一步。<br>'+
+      '做完把 进度.json 导入这里，就能看到搜了什么、找到几条、哪里有冲突。</div>';
+    return;
+  }
+  var done=PROG.filter(function(p){return p.状态==="已完成";}).length;
+  var run=PROG.filter(function(p){return p.状态==="进行中";}).length;
+  bg.textContent=done+" / "+PROG.length+(run?" · "+run+" 项进行中":"");
+  bg.className="bdg "+(run?"b-wait":(done===PROG.length?"b-ok":"b-info"));
+  el.innerHTML=
+    '<div class="pbar" style="margin-bottom:14px"><i style="width:'+
+    (PROG.length?done/PROG.length*100:0)+'%"></i></div>'+
+    '<div class="steps">'+PROG.map(function(p,i){
+      var st=p.状态==="已完成"?["b-ok","已完成"]:p.状态==="进行中"?["b-wait","进行中"]
+        :p.状态==="失败"?["b-no","失败"]:["b-idle","待执行"];
+      return '<div class="step"><div class="step-n">'+(i+1)+'</div>'+
+        '<div class="step-b"><div class="step-t">'+esc(p.步骤||"")+
+        '<span class="bdg '+st[0]+'" style="margin-left:8px">'+st[1]+'</span></div>'+
+        (p.说明?'<div class="step-d">'+esc(p.说明)+'</div>':"")+
+        (p.结果?'<div class="step-r">'+esc(p.结果)+'</div>':"")+
+        (p.耗时?'<div class="step-x">'+esc(p.耗时)+'</div>':"")+'</div></div>';
+    }).join("")+'</div>';
+}
+
+/* 统一刷新入口 */
 function refreshAll(){
-  renderToday();renderProf();renderExt();renderInt();
+  renderToday();renderAsk();renderProg();renderProf();renderExt();renderInt();
   renderFact();renderTodo();renderLog();renderTgt();
 }
 
@@ -933,6 +1159,18 @@ function seed(){
     {id:"t2",t:"插座与座位限制",who:"店长",cy:"每季",due:"2026-12-01",ok:false}];
   LOG=[{d:"2026-10-05",t:"示例数据初始化",x:"",
     y:"载入示例：5 条事实待填、3 条外部说法、1 处冲突、1 条盲区",p:""}];
+  PROG=[
+    {步骤:"检索企业官网",说明:"按品牌名 + 地区定位主体",结果:"找到 1 条。官网只给门店总数，不给价格——这是客户最在意但官网答不了的点",
+     耗时:"12 秒",状态:"已完成"},
+    {步骤:"检索第三方场馆平台",说明:"本地生活类平台",结果:"找到 3 条。发现两个门店页报价不同，且都自称「全国统一」",
+     耗时:"28 秒",状态:"已完成"},
+    {步骤:"检索电商平台",说明:"私教课商品页",结果:"找到 5 条。电商挂牌价低于场馆口径三成",
+     耗时:"19 秒",状态:"已完成"},
+    {步骤:"检索媒体报道",说明:"行业与品牌报道",结果:"找到 1 篇。含竞品真实门店数与价格",
+     耗时:"35 秒",状态:"已完成"},
+    {步骤:"检索地图点评",说明:"门店页与评分",结果:"",耗时:"",状态:"待执行"},
+    {步骤:"交叉比对",说明:"价格 / 成立时间 / 服务范围 / 联系方式 / 资质",结果:"",
+     耗时:"",状态:"待执行"}];
 }
 
 /* 文件桥 */
@@ -983,6 +1221,10 @@ function fromFiles(files,firm){
     return {d:x.日期,t:x.变更类型,y:x.变更后,p:x.触发原因};});
   var en=pick("环境状态");
   if(en)ENVT.t=en;
+  var pg=pick("进度");
+  if(pg&&pg.步骤)PROG=pg.步骤.map(function(x,i){
+    return {步骤:x.步骤||("步骤 "+(i+1)),说明:x.说明||"",结果:x.结果||"",
+      耗时:x.耗时||"",状态:x.状态||"待执行"};});
   FROMFILE=true;
   SEED_DONE=false;
   var e2=document.getElementById("entName");
@@ -1028,6 +1270,13 @@ function toFiles(){
     记录:LOG.map(function(l){return {日期:l.d,变更类型:l.t,变更前:l.x||null,
       变更后:l.y||null,触发原因:l.p||null};})},null,2);
   if(ENVT.t)out[base+"/环境状态.json"]=JSON.stringify(ENVT.t,null,2);
+  if(PROG.length)out[base+"/进度.json"]=JSON.stringify({
+    _说明:"Agent 每完成一步就回写这个文件，用户导入后能看到实时进度。",
+    _schema:1,更新时间:new Date().toISOString(),步骤:PROG},null,2);
+  if(TASKS.length)out[base+"/任务清单.json"]=JSON.stringify({
+    _说明:"页面生成的执行清单。Agent 读这个就知道要做什么。",
+    _schema:1,企业:(S.brand||S.ent||""),生成时间:new Date().toISOString(),
+    任务:TASKS.map(function(t){return {动作:t.id,说明:t.t,指令:t.text};})},null,2);
   return out;
 }
 function buildMd(){
@@ -1116,7 +1365,7 @@ function doSync(){
 
 /* 事件 */
 var GOTO={build:"sec-build",ext:"sec-ext",fact:"sec-fact",todo:"sec-todo",
-  log:"sec-log",sync:"sec-sync",today:"today"};
+  log:"sec-log",sync:"sec-sync",today:"today",ask:"sec-ask"};
 document.addEventListener("click",function(e){
   var t;
   if(e.target.closest("#burger")){
@@ -1138,6 +1387,7 @@ document.addEventListener("click",function(e){
     document.getElementById("mclose").onclick=closeM;return;}
   if(e.target.closest("#mclose")){closeM();return;}
 
+  if((t=e.target.closest("[data-ask]"))){askCmd(t.getAttribute("data-ask"));return;}
   if((t=e.target.closest("[data-goto]"))){
     var id=GOTO[t.getAttribute("data-goto")];
     if(id)document.getElementById(id).scrollIntoView({behavior:"smooth",block:"start"});return;}
@@ -1225,6 +1475,7 @@ document.addEventListener("click",function(e){
   if(e.target.closest("#btnDemoClear")){
     SEED_DONE=false;S={ent:"",full:"",brand:"",web:"",biz:"",area:"",goal:"",try:""};
     INT=[];EXT=[];CF=[];BLIND=[];FLD=[];TODO=[];LOG=[];FIRM=null;FROMFILE=false;
+    TASKS=[];PROG=[];
     var en2=document.getElementById("entName");if(en2)en2.value="";
     save();refreshAll();toast("已清空");return;}
   if(e.target.closest("#save0")){
