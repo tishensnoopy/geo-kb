@@ -565,6 +565,36 @@ h
 
 
 
+/* 企业档案表格：七项一行行，缺哪项一眼看到。
+   表格是「已有什么」的载体，表单是「要填什么」的载体，两个职责分开。 */
+.ptop{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.pstat{font-family:var(--mono);font-size:12px;color:var(--tx2)}
+.ptbl{border:1px solid var(--line);border-radius:3px;overflow:hidden}
+.ptbl table{width:100%;border-collapse:collapse}
+.ptbl td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top;
+  font-size:13.5px;line-height:1.65}
+.ptbl tr:last-child td{border-bottom:none}
+.ptbl td.k{width:92px;font-family:var(--mono);font-size:11.5px;color:var(--tx2);
+  white-space:nowrap;background:var(--bg3);border-right:1px solid var(--line)}
+.ptbl td.v{color:var(--tx);word-break:break-word}
+.ptbl td.v .miss{color:var(--rd);font-family:var(--mono);font-size:12px}
+.ptbl td.v .miss2{color:var(--tx3);font-family:var(--mono);font-size:12px}
+.ptbl td.s{width:72px;text-align:right;white-space:nowrap;vertical-align:middle}
+.ptbl .rq{color:var(--am);font-weight:400;font-size:10.5px;font-family:var(--mono);margin-left:5px}
+.ptbl .it-t{font-size:14px;font-weight:500;color:var(--tx);line-height:1.5;margin-bottom:5px}
+.ptbl .it-q{font-family:var(--mono);font-size:11.5px;color:var(--tx3);line-height:1.7}
+.ptbl .it-q b{color:var(--tx2);font-weight:400}
+.pneed{margin-top:12px;padding:10px 12px;border-left:2px solid var(--rd);
+  background:var(--rd-bg);font-size:13px;color:var(--tx2);line-height:1.7;border-radius:0 2px 2px 0}
+.pneed b{color:var(--rd);font-weight:600}
+.pneed.ok{border-left-color:var(--ac);background:var(--ac-bg)}
+.pneed.ok b{color:var(--ac)}
+@media(max-width:480px){
+  .ptbl td.k{width:auto}
+  .ptbl td{padding:9px 10px;font-size:13px}
+  .ptbl td.s{width:60px}
+}
+
 /* 首屏开始卡 */
 .start{text-align:left;padding:2px 0 4px}
 .start-t{font-size:19px;font-weight:600;color:var(--tx);margin-bottom:8px;line-height:1.4}
@@ -913,9 +943,10 @@ select:focus-visible,.opt:focus-visible{
     <div class="card-b">
       <div class="start">
         <div class="start-t">先告诉我这家企业是谁</div>
-        <div class="start-s">下面六个问题，两分钟填完。填完就能联网搜「外面怎么说」，再逐条跟你核对。</div>
-        <div class="start-n">不用一次填完，随时能改。填错了也没关系，这一步只是给后面的检索定位主体。</div>
+        <div class="start-s">七项填完，就能联网搜「外面怎么说」，再逐条跟你核对。</div>
+        <div class="start-n">品牌名填了就够开始。工商全称答不上没关系——先用「品牌名 + 地区」检索，主体会标「未确认」，后面再补。</div>
         <div class="start-demo">
+          <button class="btn btn-p" id="btnJumpForm">开始填 →</button>
           <span>想先看看长什么样？</span>
           <button class="btn btn-sm" id="btnDemo">载入示例数据</button>
           <span id="demoClearWrap" style="display:none">
@@ -926,8 +957,16 @@ select:focus-visible,.opt:focus-visible{
     </div>
   </div>
 
+  <div class="card" id="tableCard">
+    <div class="card-h"><span class="n">1</span><span class="t">企业档案</span><span class="st todo" id="st0">未开始</span></div>
+    <div class="card-b"><div id="profTable"></div></div>
+  </div>
+
   <div class="card" id="formCard">
-    <div class="card-h"><span class="n">1</span><span class="t">企业基本信息</span><span class="st todo" id="st0">未开始</span></div>
+    <div class="card-h">
+      <span class="n">1</span><span class="t" id="formCardT">填写企业信息</span>
+      <button class="btn btn-sm" id="btnHideForm" style="margin-left:auto">收起</button>
+    </div>
     <div class="card-b">
       <div class="fld">
         <label>客户平时怎么称呼你们<span class="req">必填</span></label>
@@ -1420,13 +1459,26 @@ function renderExt(){
 
 function renderInt(){
   var el=document.getElementById("intList");
-  if(!INT.length){el.innerHTML='<div class="empty"><div class="big">还没有购买意图</div>先填好第 1 步的企业档案<br>然后跟 Agent 说「推导客户购买意图」</div>';return;}
-  el.innerHTML=INT.map(function(x){
-    return '<div class="ii"><div><div class="tt">'+esc(x.t)+'</div>'+
-      '<div class="qq">在意 <b>'+esc(x.c)+'</b> · 判断 <b>'+esc(x.j)+'</b><br>'+
-      '说错后果 <b>'+esc(x.bad)+'</b> · '+esc(x.who)+'</div></div>'+
-      '<span class="st '+(x.ok?"ok":"wait")+'">'+(x.ok?"已确认":"待确认")+'</span></div>';
+  if(!INT.length){
+    el.innerHTML='<div class="empty"><div class="big">还没有购买意图</div>'+
+      '先在第 1 步填好企业档案<br>然后跟 Agent 说「推导客户购买意图」</div>';return;}
+  var ok=INT.filter(function(x){return x.ok;}).length;
+  var rows=INT.map(function(x,i){
+    return '<tr><td class="k">意图 '+(i+1)+'</td>'+
+      '<td class="v"><div class="it-t">'+esc(x.t)+'</div>'+
+      '<div class="it-q">在意 '+esc(x.c||"—")+' · 判断 '+esc(x.j||"—")+
+      '<br>说错后果 '+esc(x.bad||"—")+' · '+esc(x.who||"")+'</div></td>'+
+      '<td class="s"><span class="st '+(x.ok?"ok":"wait")+'">'+(x.ok?"已确认":"待确认")+'</span></td></tr>';
   }).join("");
+  el.innerHTML=
+    '<div class="ptop"><span class="pstat">'+ok+' / '+INT.length+' 条已确认</span>'+
+    '<span class="st '+(ok===INT.length?"ok":"wait")+'">'+
+    (ok===INT.length?"可以往下推字段":"还有 "+(INT.length-ok)+" 条没确认")+'</span></div>'+
+    '<div class="ptbl"><table>'+rows+'</table></div>'+
+    '<div class="btn-row" style="margin-top:14px">'+
+      '<button class="btn btn-p btn-sm" id="confirmInt">'+
+      (ok===INT.length?"全部已确认，继续":"全部确认，继续推字段")+'</button>'+
+      '<span class="hint">确认后才会推导需要填哪些字段</span></div>';
 }
 
 function renderFld(){
@@ -1539,7 +1591,7 @@ function renderBlind(){
 }
 
 /* 统一刷新 */
-function refreshAll(){renderToday();renderCf();renderExt();renderInt();renderFld();renderTodo();renderLog();renderTgt();paintStart();}
+function refreshAll(){renderToday();renderCf();renderExt();renderInt();renderFld();renderTodo();renderLog();renderTgt();renderProf();paintStart();}
 
 var PAGES={s0:["企业档案","第 1 步 · 拿基本信息"],s2:["外部对账","第 2 步 · 逐条对账：认了才算事实"],
   s3:["客户购买意图","第 3 步 · 先确认意图，不确认不往下走"],s4:["必填事实","第 4 步 · 从意图推出该填什么"],
@@ -1561,23 +1613,54 @@ function paintThemeBtn2(){
   b.title=(t==="light"?"切到明亮模式":"切到暗黑模式");
 }
 
-/* 首屏：表单常驻可见。引导条只在「一个字段都还没填」时显示，填完自动收起。
-   绝不能把输入框藏起来——用户打开就要能直接开始填。 */
-var SESSION_DEMO_DONE=false;
+/* 首屏三态：引导 → 表格 → 表单。
+   铁律：表单永远可以展开，绝不把输入框永久藏起来。 */
+var SESSION_DEMO_DONE=false, FORM_OPEN=false;
+
+/* 企业档案表格：七项一行行，缺哪项一眼看到 */
+function renderProf(){
+  var el=document.getElementById("profTable");
+  if(!el)return;
+  var F=[["品牌名",S.brand,true],["工商全称",S.full,false],["官网",S.web,false],
+         ["主要业务",S.biz,true],["覆盖地区",S.area,true],["本次目标",S.goal,true],
+         ["GEO 尝试",S.try,false]];
+  var done=F.filter(function(r){return !!r[1];}).length;
+  var miss=F.filter(function(r){return r[2]&&!r[1];});
+  var status=!done?["todo","尚未开始"]:miss.length?["wait",miss.length+" 项待填"]:["ok","已完成"];
+  var rows=F.map(function(r){
+    var v=r[1]?esc(r[1]):(r[2]?'<span class="miss">待填</span>':'<span class="miss2">未填</span>');
+    return '<tr><td class="k">'+esc(r[0])+(r[2]?'<b class="rq">必填</b>':"")+
+      '</td><td class="v">'+v+'</td></tr>';
+  }).join("");
+  el.innerHTML=
+    '<div class="ptop"><span class="pstat">'+done+' / '+F.length+' 项已填</span>'+
+    '<span class="st '+status[0]+'">'+status[1]+'</span></div>'+
+    '<div class="ptbl"><table>'+rows+'</table></div>'+
+    '<div class="pneed'+(miss.length?"":" ok")+'">'+
+      (miss.length
+        ?'必填项还缺 <b>'+miss.map(function(r){return esc(r[0]);}).join("、")+'</b>，补齐后才能往下走。'
+        :'必填项齐了。'+(done===F.length?'所有字段都有内容。':'其余字段随时补，不影响往下走。'))+
+    '</div>'+
+    '<div class="btn-row" style="margin-top:14px">'+
+      '<button class="btn btn-p btn-sm" data-showform>'+(done?'编辑档案':'开始填 →')+'</button>'+
+      '<span class="hint">点这里展开 / 收起填写表单</span></div>';
+}
+
 function paintStart(){
-  // 表单永远可见，绝不藏输入框。
-  // 引导条的三种状态：
-  //   空→ 引导 + 「载入示例」
-  //   已载入示例 → 引导 + 「清空示例」（必须留着，否则用户没法清）
-  //   填了自己的内容 → 收起
+  // 表单永远可展开；未填时先给表格，填了才默认展开。
   var isDemo=SESSION_DEMO_DONE&&!FROMFILE;
   var has=!!(S.full||S.brand);
-  var g=document.getElementById("guideCard"), fc=document.getElementById("formCard");
+  var g=document.getElementById("guideCard");
+  var tc=document.getElementById("tableCard");
+  var fc=document.getElementById("formCard");
   var dw=document.getElementById("demoClearWrap");
   if(!fc)return;
-  fc.style.display="";
   if(dw)dw.style.display=isDemo?"":"none";
   if(g)g.style.display=(has&&!isDemo)?"none":"";
+  if(tc)tc.style.display=has?"":"none";
+  fc.style.display=(has||FORM_OPEN)?"":"none";
+  var t=document.getElementById("formCardT");
+  if(t)t.textContent=has?"编辑企业信息":"填写企业信息";
 }
 function go(p){
   Object.keys(PAGES).forEach(function(k){document.getElementById(k).style.display=(k===p)?"":"none";});
@@ -1665,6 +1748,9 @@ function toast(msg,ok){
 
 document.addEventListener("click",function(e){
   var t;
+  if(e.target.closest("[data-showform]")){FORM_OPEN=!FORM_OPEN;paintStart();return;}
+  if(e.target.closest("#btnHideForm")){FORM_OPEN=false;paintStart();return;}
+  if(e.target.closest("#btnJumpForm")){FORM_OPEN=true;paintStart();return;}
   if(e.target.closest("#btnDemo")){SESSION_DEMO_DONE=true;seed();fillForm();paintStart();toast("已载入示例，可随时清空",true);return;}
   if(e.target.closest("#btnDemoClear")){
     SESSION_DEMO_DONE=false;
