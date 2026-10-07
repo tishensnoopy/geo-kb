@@ -38,8 +38,8 @@ body{background:var(--bg);color:var(--tx);font-family:var(--sans);font-size:16px
 button{font-family:inherit}
 
 /* 布局 */
-.shell{display:flex;min-min-height:100dvh}
-.side{width:232px;flex:none;border-right:1px solid var(--line);padding:20px 0;
+.shell{display:flex;min-height:100dvh}
+.side{width:212px;flex:none;border-right:1px solid var(--line);padding:20px 0;
   position:sticky;top:0;min-height:100dvh;overflow-y:auto;background:var(--bg)}
 .side .lgo{font-family:var(--mono);font-size:13.5px;padding:0 20px 20px;margin-bottom:14px;
   border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
@@ -53,15 +53,570 @@ button{font-family:inherit}
 .side a .nn{font-family:var(--mono);font-size:10.5px;color:var(--tx3);margin-left:auto}
 .side a.on .nn{color:var(--ac)}
 .main{flex:1;min-width:0;padding:26px 30px 40px}
-@media(max-width:1000px){
+
+/
+*
+ 
+首
+屏
+开
+始
+卡
+ 
+*
+/
+
+
+.
+s
+t
+a
+r
+t
+{
+t
+e
+x
+t
+-
+a
+l
+i
+g
+n
+:
+l
+e
+f
+t
+;
+p
+a
+d
+d
+i
+n
+g
+:
+8
+p
+x
+ 
+0
+ 
+4
+p
+x
+}
+
+
+.
+s
+t
+a
+r
+t
+-
+t
+{
+f
+o
+n
+t
+-
+s
+i
+z
+e
+:
+1
+9
+p
+x
+;
+f
+o
+n
+t
+-
+w
+e
+i
+g
+h
+t
+:
+6
+0
+0
+;
+c
+o
+l
+o
+r
+:
+v
+a
+r
+(
+-
+-
+t
+x
+)
+;
+m
+a
+r
+g
+i
+n
+-
+b
+o
+t
+t
+o
+m
+:
+8
+p
+x
+;
+l
+i
+n
+e
+-
+h
+e
+i
+g
+h
+t
+:
+1
+.
+4
+}
+
+
+.
+s
+t
+a
+r
+t
+-
+s
+{
+f
+o
+n
+t
+-
+s
+i
+z
+e
+:
+1
+4
+p
+x
+;
+c
+o
+l
+o
+r
+:
+v
+a
+r
+(
+-
+-
+t
+x
+2
+)
+;
+l
+i
+n
+e
+-
+h
+e
+i
+g
+h
+t
+:
+1
+.
+7
+5
+;
+m
+a
+r
+g
+i
+n
+-
+b
+o
+t
+t
+o
+m
+:
+1
+8
+p
+x
+;
+m
+a
+x
+-
+w
+i
+d
+t
+h
+:
+4
+6
+e
+m
+}
+
+
+.
+s
+t
+a
+r
+t
+-
+n
+{
+f
+o
+n
+t
+-
+f
+a
+m
+i
+l
+y
+:
+v
+a
+r
+(
+-
+-
+m
+o
+n
+o
+)
+;
+f
+o
+n
+t
+-
+s
+i
+z
+e
+:
+1
+1
+.
+5
+p
+x
+;
+c
+o
+l
+o
+r
+:
+v
+a
+r
+(
+-
+-
+t
+x
+3
+)
+;
+m
+a
+r
+g
+i
+n
+-
+t
+o
+p
+:
+1
+6
+p
+x
+;
+l
+i
+n
+e
+-
+h
+e
+i
+g
+h
+t
+:
+1
+.
+7
+}
+
+
+.
+b
+t
+n
+-
+l
+g
+{
+m
+i
+n
+-
+h
+e
+i
+g
+h
+t
+:
+4
+8
+p
+x
+;
+p
+a
+d
+d
+i
+n
+g
+:
+0
+ 
+2
+2
+p
+x
+;
+f
+o
+n
+t
+-
+s
+i
+z
+e
+:
+1
+5
+p
+x
+}
+
+
+@
+m
+e
+d
+i
+a
+(
+m
+a
+x
+-
+w
+i
+d
+t
+h
+:
+4
+8
+0
+p
+x
+)
+{
+
+
+ 
+ 
+.
+s
+t
+a
+r
+t
+-
+t
+{
+f
+o
+n
+t
+-
+s
+i
+z
+e
+:
+1
+7
+p
+x
+}
+
+
+ 
+ 
+.
+s
+t
+a
+r
+t
+-
+s
+{
+f
+o
+n
+t
+-
+s
+i
+z
+e
+:
+1
+3
+.
+5
+p
+x
+}
+
+
+ 
+ 
+.
+b
+t
+n
+-
+l
+g
+{
+w
+i
+d
+t
+h
+:
+1
+0
+0
+%
+}
+
+
+}
+
+
+
+
+/* 首屏开始卡 */
+.start{text-align:left;padding:8px 0 4px}
+.start-t{font-size:19px;font-weight:600;color:var(--tx);margin-bottom:8px;line-height:1.4}
+.start-s{font-size:14px;color:var(--tx2);line-height:1.75;margin-bottom:18px;max-width:46em}
+.start-n{font-family:var(--mono);font-size:11.5px;color:var(--tx3);margin-top:16px;line-height:1.7}
+.btn-lg{min-height:48px;padding:0 22px;font-size:15px}
+@media(max-width:480px){
+  .start-t{font-size:17px}
+  .start-s{font-size:13.5px}
+  .btn-lg{width:100%}
+}
+
+/* 抽屉头：窄容器时出现，宽容器隐藏 */
+.sidenav{position:sticky;top:0;z-index:60;background:var(--bg);border-bottom:1px solid var(--line)}
+.sidenav .row{display:none;align-items:center;gap:10px;padding:9px 14px}
+.sidenav .cur{flex:1;min-width:0}
+.sidenav .cur b{display:block;font-size:14.5px;font-weight:600;color:var(--tx);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sidenav .cur em{display:block;font-family:var(--mono);font-style:normal;font-size:10.5px;
+  color:var(--tx3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.burger{width:38px;height:34px;flex:none;border:1px solid var(--line2);border-radius:2px;
+  background:var(--bg2);cursor:pointer;display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:3px}
+.burger span{display:block;width:15px;height:1.5px;background:var(--tx2)}
+.burger:active{transform:translateY(1px)}
+
+/* 720px 以下：侧栏收成抽屉，主区拿全宽。
+   这一档是为 WorkBuddy 内嵌预览面板（约屏幕 1/3 宽）设的，不是手机。 */
+@media(max-width:820px){
   .shell{flex-direction:column}
   .side{width:100%;height:auto;position:static;border-right:none;border-bottom:1px solid var(--line);
-    padding:14px 0;overflow-x:auto}
-  .side .lgo{padding:0 16px 12px;margin-bottom:10px}
-  .side .sec-l{display:none}
-  .side a{border-left:none;border-bottom:2px solid transparent;padding:8px 16px;white-space:nowrap}
-  .side a.on{border-left:none;border-bottom-color:var(--ac)}
-  .main{padding:20px 16px 32px}
+    padding:8px 0 14px;overflow-x:auto;display:none}
+  .side.open{display:block}
+  .side .lgo{padding:0 16px 12px;margin-bottom:8px}
+  .side a{padding:11px 16px;min-height:44px}
+  .sidenav .row{display:flex}
+  .main{padding:16px 14px 32px}
+  .bar{margin-bottom:18px;gap:10px}
+  .meta{flex-direction:column}
+  .meta>div{width:100%!important;min-width:0!important}
+  .tgts{grid-template-columns:1fr}
+  .card-h{flex-wrap:wrap;row-gap:6px}
+  .card-b{overflow-x:auto}
+  .btn{padding:0 14px}
+}
+
+/* 更窄：内嵌面板常见 420-500px */
+@media(max-width:480px){
+  .main{padding:13px 10px 28px}
+  h1{font-size:18px}
+  .btn{padding:0 12px;font-size:13px}
+  .btn-row{gap:7px}
 }
 
 /* 顶条 */
@@ -172,7 +727,7 @@ select:focus-visible,.opt:focus-visible{
 .ttt:active{transform:translateY(1px)}
 .ttt svg{width:14px;height:14px}
 @media(max-width:1000px){
-  .side .lgo{padding:0 16px 12px;margin-bottom:10px}
+  .side .lgo{padding:0 16px 12px;margin-bottom:8px}
   .ttt{min-width:44px;height:34px}
   .ttt svg{width:16px;height:16px}
 }
@@ -231,7 +786,7 @@ select:focus-visible,.opt:focus-visible{
 .cf .q2{font-size:13.5px;color:var(--tx);line-height:1.7;background:var(--bg);
   padding:11px 13px;border-radius:2px;margin-bottom:10px}
 .cf .q2 b{color:var(--am)}
-@media(max-width:640px){.cf .cmp{grid-template-columns:1fr}.cf .vs{text-align:center}}
+@media(max-width:600px){.cf .cmp{grid-template-columns:1fr}.cf .vs{text-align:center}}
 
 .blind{border:1px solid var(--am);border-left:3px solid var(--am);background:var(--am-bg);
   border-radius:3px;padding:15px 17px;margin-bottom:12px}
@@ -252,10 +807,10 @@ select:focus-visible,.opt:focus-visible{
 
 /* 弹窗 */
 .mask{position:fixed;inset:0;background:rgba(5,6,5,.8);display:flex;align-items:flex-end;justify-content:center;z-index:90}
-@media(min-width:721px){.mask{align-items:center;padding:24px}}
+@media(min-width:821px){.mask{align-items:center;padding:24px}}
 .modal{background:var(--bg2);width:100%;max-width:520px;max-height:88vh;overflow-y:auto;
   border:1px solid var(--line2);border-radius:3px;padding:22px;box-sizing:border-box}
-@media(min-width:721px){.modal{border-radius:3px;max-height:84vh}}
+@media(min-width:821px){.modal{border-radius:3px;max-height:84vh}}
 .modal h3{font-size:17px;font-weight:600;margin-bottom:5px}
 .modal .msub{font-family:var(--mono);font-size:11.5px;color:var(--tx3);margin-bottom:18px}
 .modal .btn-row{display:flex;gap:9px}
@@ -297,7 +852,21 @@ select:focus-visible,.opt:focus-visible{
 <body>
 <a class="skip" href="#main">跳到主要内容</a>
 <div class="shell">
-<nav class="side">
+
+<div class="sidenav">
+  <div class="row">
+    <button class="burger" id="burger" aria-label="展开步骤导航" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="cur">
+      <b id="navTitle">企业档案</b>
+      <em id="navSub">第 1 步 · 拿基本信息</em>
+    </div>
+    <button class="ttt" id="ttBtn2" title="切换明暗主题" aria-label="切换明暗主题"></button>
+  </div>
+</div>
+
+<nav class="side" id="side">
   <div class="lgo"><b>geo-kb</b> 工作台
     <button class="ttt" id="ttBtn" title="切换明暗主题" aria-label="切换明暗主题"></button>
   </div>
@@ -335,43 +904,58 @@ select:focus-visible,.opt:focus-visible{
 
 <!-- 0 企业档案 -->
 <section class="pg" id="s0">
-  <div class="card">
-    <div class="card-h"><span class="n">1</span><span class="t">基本信息</span><span class="st todo" id="st0">未开始</span></div>
+  <div class="card" id="startCard" style="display:none">
+    <div class="card-b">
+      <div class="start">
+        <div class="start-t">先告诉我这家企业是谁</div>
+        <div class="start-s">六个问题，两分钟填完。填完就能联网搜「外面怎么说」，再逐条跟你核对。</div>
+        <button class="btn btn-p btn-lg" id="btnStart">开始填企业信息</button>
+        <button class="btn btn-sm" id="btnDemo">先看看示例</button>
+        <div class="start-n">不用一次填完，随时能改。填错了也没关系，这一步只是给后面的检索定位主体。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="formCard">
+    <div class="card-h"><span class="n">1</span><span class="t">企业基本信息</span><span class="st todo" id="st0">未开始</span></div>
     <div class="card-b">
       <div class="fld">
-        <label>工商全称<span class="req">必填</span></label>
-        <div class="hint">营业执照上的名字。答不上也没关系，先用品牌名 + 地区检索，主体会标「未确认」</div>
-        <input id="f0full" placeholder="示例市××健身服务有限公司">
+        <label>客户平时怎么称呼你们<span class="req">必填</span></label>
+        <div class="hint">先填这个就够了。工商全称下面可以后补</div>
+        <input id="f0brand" placeholder="例如：示例口腔">
       </div>
       <div class="fld">
-        <label>常用品牌名<span class="req">必填</span></label>
-        <input id="f0brand" placeholder="客户平时怎么称呼我们">
+        <label>工商全称</label>
+        <div class="hint">营业执照上的名字。答不上也没关系——先用品牌名 + 地区检索，主体会标「未确认」，后面再补</div>
+        <input id="f0full" placeholder="例如：示例市××口腔门诊部有限公司">
       </div>
       <div class="fld">
         <label>官网地址</label>
-        <div class="hint">没有官网不是问题，但要意识到——官网是最权威的事实来源，缺了它 AI 只能引用第三方平台的说法，而那些错误它也会学</div>
+        <div class="hint">没有官网不是问题，但要意识到——官网是最权威的事实来源。缺了它，AI 只能引用第三方平台的说法，而那些错误它也会学</div>
         <input id="f0web" placeholder="https://">
       </div>
       <div class="fld">
-        <label>主营业务<span class="req">必填</span></label>
-        <div class="hint">用你自己的说法，不要改成行业术语。AI 会照着复述</div>
+        <label>你们主要做什么<span class="req">必填</span></label>
+        <div class="hint">用你自己的话，别改成行业术语。AI 会照着复述</div>
         <textarea id="f0biz" placeholder="我们主要做什么"></textarea>
       </div>
       <div class="fld">
-        <label>主要客户地区<span class="req">必填</span></label>
-        <input id="f0area" placeholder="集中在哪个城市、哪个片区">
+        <label>主要在哪些城市或片区<span class="req">必填</span></label>
+        <input id="f0area" placeholder="例如：示例市城南、城北">
       </div>
       <div class="fld">
         <label>这次最想解决什么<span class="req">必填</span></label>
         <div class="hint">一句话。客户问 AI 的时候把你说错了？还是压根不提你？</div>
-        <input id="f0goal" placeholder="AI 提到我们的时候说得不准">
+        <textarea id="f0goal" placeholder="例如：AI 报的价格和实际不一样，客户来办卡发现不对"></textarea>
       </div>
       <div class="fld">
-        <label>已有的 GEO 尝试</label>
+        <label>之前做过 GEO 吗</label>
         <div class="hint">没做过就写「未做过」，不要为了好看编</div>
         <input id="f0try" placeholder="未做过">
       </div>
-      <div class="btn-row"><button class="btn btn-p" id="save0">保存档案</button></div>
+      <div class="btn-row">
+        <button class="btn btn-p" id="save0">保存，下一步：搜「外面怎么说」</button>
+      </div>
     </div>
   </div>
 </section>
@@ -539,7 +1123,7 @@ function load(){
       FIRM=d.FIRM||null;FROMFILE=!!d.FROMFILE;ENVT=d.ENVT||{t:null};
     }
   }catch(e){}
-  if(!INT.length&&!S.ent){seed();}
+  if(!INT.length&&!S.ent&&!SESSION_DEMO_DONE){/* 首屏干净，不自动塞示例。点「先看看示例」才填*/}
 }
 function save(){
   try{localStorage.setItem(DRAFT,JSON.stringify({ent:S.ent,full:S.full,brand:S.brand,web:S.web,
@@ -778,6 +1362,9 @@ function stats(){
 /* 渲染层 */
 function renderToday(){
   var s=stats(),el=document.getElementById("todayTxt");
+  if(!(S.full||S.brand)){
+    el.innerHTML="还没开始。先在下面填这家企业是谁，填完就能联网搜「外面怎么说」，再逐条跟你核对。";
+    return;}
   if(!s.subs.length){el.innerHTML="没有待处理事项。可以进入第 7 步同步出去了。";return;}
   el.innerHTML="轮到你了：<b>"+s.subs.join("</b> · <b>")+"</b>。";
   var st=document.getElementById("st0");
@@ -942,17 +1529,51 @@ function renderBlind(){
 }
 
 /* 统一刷新 */
-function refreshAll(){renderToday();renderCf();renderExt();renderInt();renderFld();renderTodo();renderLog();renderTgt();}
+function refreshAll(){renderToday();renderCf();renderExt();renderInt();renderFld();renderTodo();renderLog();renderTgt();paintStart();}
 
 var PAGES={s0:["企业档案","第 1 步 · 拿基本信息"],s2:["外部对账","第 2 步 · 逐条对账：认了才算事实"],
   s3:["客户购买意图","第 3 步 · 先确认意图，不确认不往下走"],s4:["必填事实","第 4 步 · 从意图推出该填什么"],
   s6:["更新待办","第 5 步 · 知识库是长期资产"],s8:["变更记录","第 6 步 · 改了什么、为什么、谁改的"],
   s7:["同步知识库","第 7 步 · 让成果进内容生产环节"]};
+/* 把当前数据填进表单 */
+function fillForm(){
+  var m=[["f0full",S.full],["f0brand",S.brand],["f0web",S.web],["f0biz",S.biz],
+         ["f0area",S.area],["f0goal",S.goal],["f0try",S.try],["entName",FIRM]];
+  m.forEach(function(p){var el=document.getElementById(p[0]);if(el)el.value=p[1]||"";});
+}
+
+/* 抽屉头的主题按钮（窄容器时用） */
+function paintThemeBtn2(){
+  var b=document.getElementById("ttBtn2");
+  if(!b)return;
+  var t=document.documentElement.getAttribute("data-t")==="light"?"dark":"light";
+  b.innerHTML=t==="light"?MOON:SUN;
+  b.title=(t==="light"?"切到明亮模式":"切到暗黑模式");
+}
+
+/* 首屏：没数据时先给一个开始入口，不直接甩表单，也不自动塞示例 */
+var SESSION_DEMO_DONE=false;
+function paintStart(){
+  var has=!!(S.full||S.brand);
+  var sc=document.getElementById("startCard"), fc=document.getElementById("formCard");
+  if(!sc||!fc)return;
+  if(has||SESSION_DEMO_DONE){sc.style.display="none";fc.style.display="";}
+  else{sc.style.display="";fc.style.display="none";}
+}
 function go(p){
   Object.keys(PAGES).forEach(function(k){document.getElementById(k).style.display=(k===p)?"":"none";});
   document.querySelectorAll(".side a").forEach(function(a){a.className=(a.getAttribute("data-p")===p)?"on":"";});
-  document.getElementById("ptitle").textContent=PAGES[p][0];
+  var t=PAGES[p][0];
+  document.getElementById("ptitle").textContent=t;
   document.getElementById("pd").textContent=PAGES[p][1];
+  var nt=document.getElementById("navTitle"), ns=document.getElementById("navSub");
+  if(nt)nt.textContent=t;
+  if(ns)ns.textContent=PAGES[p][1];
+  // 窄容器下切完步骤自动收起抽屉
+  var sd=document.getElementById("side");
+  if(sd)sd.className="side";
+  var bg=document.getElementById("burger");
+  if(bg)bg.setAttribute("aria-expanded","false");
   window.scrollTo({top:0,behavior:"smooth"});
 }
 
@@ -1025,6 +1646,17 @@ function toast(msg,ok){
 
 document.addEventListener("click",function(e){
   var t;
+  if(e.target.closest("#btnStart")){SESSION_DEMO_DONE=true;paintStart();fillForm();return;}
+  if(e.target.closest("#btnDemo")){SESSION_DEMO_DONE=true;seed();fillForm();paintStart();toast("已载入示例，可随时清空",true);return;}
+  if(e.target.closest("#burger")){
+    var sd=document.getElementById("side");
+    var isOpen=sd.className.indexOf("open")>=0;
+    sd.className=isOpen?"side":"side open";
+    e.target.closest("#burger").setAttribute("aria-expanded",isOpen?"false":"true");
+    return;}
+  if(e.target.closest("#ttBtn2")){
+    var cur=document.documentElement.getAttribute("data-t");
+    applyTheme(cur==="light"?"dark":"light");paintThemeBtn();paintThemeBtn2();return;}
   if(e.target.closest("#btnImport")){
     document.getElementById("fileInput").click();
     return;}
@@ -1077,7 +1709,7 @@ document.addEventListener("click",function(e){
     S.ent=S.ent||S.brand;
     if(!S.brand&&!S.full){toast("至少填品牌名或工商全称");return;}
     addLog("保存企业档案","",S.brand||S.full);
-    save();refreshAll();go("s2");return;}
+    save();refreshAll();paintStart();go("s2");return;}
   if(e.target.closest("#confirmInt")){
     INT.forEach(function(x){x.ok=true;});
     addLog("确认购买意图",INT.length+" 条","进入字段推导");save();refreshAll();go("s4");return;}
@@ -1284,7 +1916,7 @@ document.getElementById("f0biz").value=S.biz||"";
 document.getElementById("f0area").value=S.area||"";
 document.getElementById("f0goal").value=S.goal||"";
 document.getElementById("f0try").value=S.try||"";
-go("s0");paintThemeBtn();paintSyncHint();refreshAll();
+fillForm();go("s0");paintThemeBtn();paintThemeBtn2();paintSyncHint();paintStart();refreshAll();
 </script>
 </body>
 </html>
